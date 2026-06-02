@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import {
   Plus,
@@ -12,8 +13,8 @@ import {
   CheckCircle2,
   Copy,
   Clock,
+  Loader2,
 } from "lucide-react";
-import { useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -23,6 +24,8 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import { createClient } from "@/utils/supabase/client";
+import type { BankAccount } from "@/hooks/use-banking";
 
 /* ── Container variants ─────────────────────────────────────── */
 const containerVariants = {
@@ -66,6 +69,72 @@ function CopyField({ label, value }: { label: string; value: string }) {
 
 /* ── Deposit Page ────────────────────────────────────────────── */
 export default function DepositPage() {
+  const [accounts, setAccounts] = useState<BankAccount[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchAccounts() {
+      setLoading(true);
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        const { data } = await supabase
+          .from("bank_accounts")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("opened_at", { ascending: false });
+        setAccounts(data || []);
+      }
+      setLoading(false);
+    }
+    fetchAccounts();
+  }, []);
+
+  /* ── Loading ──────────────────────────────────────────────── */
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24">
+        <Loader2 className="h-8 w-8 animate-spin text-text-muted" />
+        <p className="mt-4 text-sm text-text-muted">Loading account details…</p>
+      </div>
+    );
+  }
+
+  const primaryAccount = accounts[0] || null;
+
+  /* ── Empty state ──────────────────────────────────────────── */
+  if (!primaryAccount) {
+    return (
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="mx-auto max-w-3xl space-y-6"
+      >
+        <motion.div variants={itemVariants}>
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 shadow-sm">
+              <Plus className="h-6 w-6 text-emerald-400" />
+            </div>
+            <div>
+              <h1 className="font-display text-2xl font-bold tracking-tight text-text-primary">
+                Deposit Funds
+              </h1>
+              <p className="mt-1 text-sm text-text-secondary">
+                Add money to your StateBank accounts.
+              </p>
+            </div>
+          </div>
+        </motion.div>
+        <div className="flex flex-col items-center justify-center py-16">
+          <Building2 className="h-12 w-12 text-text-muted" />
+          <h2 className="mt-4 font-display text-xl font-bold text-text-primary">No accounts yet</h2>
+          <p className="mt-1 text-sm text-text-muted">Open an account before making a deposit.</p>
+        </div>
+      </motion.div>
+    );
+  }
+
   return (
     <motion.div
       variants={containerVariants}
@@ -124,8 +193,8 @@ export default function DepositPage() {
               <CardContent className="space-y-4">
                 <CopyField label="Bank Name" value="StateBank Financial Services, Inc." />
                 <CopyField label="Routing Number (ABA)" value="021000021" />
-                <CopyField label="Account Number" value="SB-4002-8842-1193" />
-                <CopyField label="Account Type" value="Premium Checking" />
+                <CopyField label="Account Number" value={primaryAccount.account_number} />
+                <CopyField label="Account Name" value={primaryAccount.account_name} />
                 <CopyField label="SWIFT / BIC" value="STBKUS44" />
                 <CopyField label="Bank Address" value="100 Financial District Blvd, New York, NY 10004" />
 

@@ -1,11 +1,58 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
-import { Users, Plus, ArrowUpRight, Mail, Phone, Building2 } from "lucide-react";
+import { Users, Plus, ArrowUpRight, Mail, Phone, Building2, Loader2 } from "lucide-react";
+import { createClient } from "@/utils/supabase/client";
+import { useUser } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 
+interface Beneficiary {
+  id: string;
+  user_id: string;
+  name: string;
+  account_number: string;
+  bank_name: string;
+  email?: string;
+  phone?: string;
+  is_recent?: boolean;
+  created_at: string;
+}
+
 export default function BeneficiariesPage() {
+  const { user } = useUser();
+  const [beneficiaries, setBeneficiaries] = useState<Beneficiary[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setIsLoading(false);
+      return;
+    }
+
+    const fetchBeneficiaries = async () => {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from("beneficiaries")
+        .select("*")
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (!error && data) {
+        setBeneficiaries(data);
+      }
+      setIsLoading(false);
+    };
+
+    fetchBeneficiaries();
+  }, [user?.id]);
+
+  const maskAccount = (account: string) => {
+    if (account.length <= 4) return account;
+    return "•••• " + account.slice(-4);
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 8 }}
@@ -35,34 +82,46 @@ export default function BeneficiariesPage() {
           </Button>
         </CardHeader>
         <CardContent className="space-y-3">
-          {[
-            { name: "Jane Smith", account: "•••• 4421", bank: "Chase Bank", email: "jane@example.com", recent: true },
-            { name: "Acme Corporation", account: "•••• 8890", bank: "Bank of America", email: "payments@acme.com", recent: false },
-            { name: "Sarah Johnson", account: "•••• 2233", bank: "Wells Fargo", email: "sarah.j@example.com", recent: false },
-          ].map((ben, i) => (
-            <div key={i} className="flex items-center justify-between rounded-xl border border-border bg-bg-surface/50 p-3.5 transition-colors hover:bg-accent/50">
-              <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 text-sm font-bold text-primary">
-                  {ben.name.split(" ").map(n => n[0]).join("").slice(0, 2)}
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-text-primary">
-                    {ben.name}
-                    {ben.recent && (
-                      <span className="ml-2 inline-flex rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
-                        Recent
-                      </span>
-                    )}
-                  </p>
-                  <p className="text-xs text-text-muted">{ben.bank} &middot; {ben.account}</p>
-                </div>
-              </div>
-              <Button size="sm" variant="ghost" className="text-xs">
-                <ArrowUpRight className="h-3.5 w-3.5" />
-                Transfer
-              </Button>
+          {isLoading ? (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="h-6 w-6 animate-spin text-text-muted" />
             </div>
-          ))}
+          ) : beneficiaries.length > 0 ? (
+            beneficiaries.map((ben) => (
+              <div
+                key={ben.id}
+                className="flex items-center justify-between rounded-xl border border-border bg-bg-surface/50 p-3.5 transition-colors hover:bg-accent/50"
+              >
+                <div className="flex items-center gap-3">
+                  <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 text-sm font-bold text-primary">
+                    {ben.name.split(" ").map((n) => n[0]).join("").slice(0, 2)}
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-text-primary">
+                      {ben.name}
+                      {ben.is_recent && (
+                        <span className="ml-2 inline-flex rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-medium text-primary">
+                          Recent
+                        </span>
+                      )}
+                    </p>
+                    <p className="text-xs text-text-muted">
+                      {ben.bank_name} &middot; {maskAccount(ben.account_number)}
+                    </p>
+                  </div>
+                </div>
+                <Button size="sm" variant="ghost" className="text-xs">
+                  <ArrowUpRight className="h-3.5 w-3.5" />
+                  Transfer
+                </Button>
+              </div>
+            ))
+          ) : (
+            <div className="flex flex-col items-center justify-center py-8 text-center">
+              <Users className="h-10 w-10 text-text-muted/40 mb-3" />
+              <p className="text-sm text-text-muted">No beneficiaries yet. Add your first one to get started.</p>
+            </div>
+          )}
         </CardContent>
       </Card>
     </motion.div>

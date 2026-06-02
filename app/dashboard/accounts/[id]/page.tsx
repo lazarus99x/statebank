@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { motion } from "framer-motion";
@@ -19,87 +19,31 @@ import {
   Wallet,
   PiggyBank,
   CreditCard,
+  Landmark,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { createClient } from "@/utils/supabase/client";
+import type { BankAccount, Transaction } from "@/hooks/use-banking";
 
-/* ── Mock account data ──────────────────────────────────────── */
-const accounts = {
-  "1": {
-    id: "1",
-    name: "Premium Checking",
-    type: "Checking",
-    number: "•••• 8842",
-    accountNumber: "SB-4002-8842-1193",
-    balance: 45280.50,
-    available: 45280.50,
-    currency: "USD",
-    status: "active",
-    routing: "021000021",
-    opened: "Jan 15, 2025",
-    icon: Wallet,
-  },
-  "2": {
-    id: "2",
-    name: "High-Yield Savings",
-    type: "Savings",
-    number: "•••• 5567",
-    accountNumber: "SB-7001-5567-4421",
-    balance: 128500.00,
-    available: 128500.00,
-    currency: "USD",
-    status: "active",
-    routing: "021000021",
-    opened: "Mar 3, 2025",
-    icon: PiggyBank,
-  },
-  "3": {
-    id: "3",
-    name: "Platinum Credit Card",
-    type: "Credit",
-    number: "•••• 3391",
-    accountNumber: "SB-9003-3391-7782",
-    balance: 4500.00,
-    available: 5500.00,
-    currency: "USD",
-    status: "active",
-    routing: "021000021",
-    opened: "Feb 20, 2025",
-    icon: CreditCard,
-  },
-  "4": {
-    id: "4",
-    name: "Business Account",
-    type: "Business Checking",
-    number: "•••• 2219",
-    accountNumber: "SB-6005-2219-3340",
-    balance: 89200.00,
-    available: 89200.00,
-    currency: "USD",
-    status: "active",
-    routing: "021000021",
-    opened: "Apr 10, 2025",
-    icon: Wallet,
-  },
+/* ── Icon / gradient helpers ─────────────────────────────────── */
+const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+  Checking: Wallet,
+  Savings: PiggyBank,
+  Credit: CreditCard,
+  "Business Checking": Landmark,
+};
+const gradientMap: Record<string, string> = {
+  Checking: "from-blue-500 via-blue-600 to-blue-700",
+  Savings: "from-emerald-500 via-emerald-600 to-emerald-700",
+  Credit: "from-purple-500 via-purple-600 to-purple-700",
+  "Business Checking": "from-amber-500 via-amber-600 to-amber-700",
 };
 
-/* ── Mock transactions ──────────────────────────────────────── */
-const allTransactions = [
-  { id: "tx1", description: "Wire Transfer - John Doe", amount: -2500, date: "2026-06-01", time: "2:34 PM", type: "outgoing", status: "completed", reference: "SB-W-20260601-8842" },
-  { id: "tx2", description: "Salary Deposit - Acme Corp", amount: 8750, date: "2026-06-01", time: "9:15 AM", type: "incoming", status: "completed", reference: "SB-D-20260601-8842" },
-  { id: "tx3", description: "Amazon.com Purchase", amount: -189.99, date: "2026-05-31", time: "4:22 PM", type: "outgoing", status: "completed", reference: "SB-C-20260531-8842" },
-  { id: "tx4", description: "Transfer from Savings", amount: 500, date: "2026-05-31", time: "1:00 PM", type: "incoming", status: "completed", reference: "SB-T-20260531-8842" },
-  { id: "tx5", description: "Netflix Subscription", amount: -15.99, date: "2026-05-30", time: "3:00 AM", type: "outgoing", status: "completed", reference: "SB-C-20260530-8842" },
-  { id: "tx6", description: "Interest Payment", amount: 12.43, date: "2026-05-30", time: "12:00 AM", type: "incoming", status: "completed", reference: "SB-I-20260530-8842" },
-  { id: "tx7", description: "ATM Withdrawal", amount: -200, date: "2026-05-29", time: "10:30 AM", type: "outgoing", status: "completed", reference: "SB-A-20260529-8842" },
-  { id: "tx8", description: "Direct Deposit - Freelance", amount: 3200, date: "2026-05-28", time: "11:00 AM", type: "incoming", status: "pending", reference: "SB-D-20260528-8842" },
-  { id: "tx9", description: "Electric Bill Payment", amount: -185.40, date: "2026-05-27", time: "8:00 AM", type: "outgoing", status: "completed", reference: "SB-B-20260527-8842" },
-  { id: "tx10", description: "Transfer to Savings", amount: -2000, date: "2026-05-26", time: "2:00 PM", type: "outgoing", status: "completed", reference: "SB-T-20260526-8842" },
-];
-
 /* ──── Status helpers ────────────────────────────────────────── */
-const statusConfig = {
+const statusConfig: Record<string, { icon: React.ComponentType<{ className?: string }>; class: string }> = {
   completed: { icon: CheckCircle2, class: "text-success" },
   pending: { icon: Clock, class: "text-amber-400" },
   failed: { icon: XCircle, class: "text-destructive" },
@@ -113,9 +57,58 @@ const fmt = (n: number) =>
 export default function AccountDetailPage() {
   const params = useParams();
   const { id } = params;
-  const account = accounts[id as keyof typeof accounts];
+
+  const [account, setAccount] = useState<BankAccount | null>(null);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<string>("all");
 
+  useEffect(() => {
+    if (!id) return;
+    const supabase = createClient();
+
+    async function fetchData() {
+      setLoading(true);
+
+      // Fetch account
+      const { data: acc } = await supabase
+        .from("bank_accounts")
+        .select("*")
+        .eq("id", id)
+        .single();
+      setAccount(acc);
+
+      // Fetch transactions involving this account
+      const { data: txs } = await supabase
+        .from("transactions")
+        .select("*")
+        .or(`from_account_id.eq.${id},to_account_id.eq.${id}`)
+        .order("created_at", { ascending: false })
+        .limit(50);
+
+      setTransactions(txs || []);
+      setLoading(false);
+    }
+
+    fetchData();
+  }, [id]);
+
+  const filteredTxs =
+    statusFilter === "all"
+      ? transactions
+      : transactions.filter((tx) => tx.status === statusFilter);
+
+  /* ── Loading ──────────────────────────────────────────────── */
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-24">
+        <Loader2 className="h-8 w-8 animate-spin text-text-muted" />
+        <p className="mt-4 text-sm text-text-muted">Loading account details…</p>
+      </div>
+    );
+  }
+
+  /* ── Not found ────────────────────────────────────────────── */
   if (!account) {
     return (
       <div className="flex flex-col items-center justify-center py-20">
@@ -130,10 +123,8 @@ export default function AccountDetailPage() {
     );
   }
 
-  const filteredTxs =
-    statusFilter === "all"
-      ? allTransactions
-      : allTransactions.filter((tx) => tx.status === statusFilter);
+  const Icon = iconMap[account.account_type] || Wallet;
+  const gradient = gradientMap[account.account_type] || "from-blue-500 via-blue-600 to-blue-700";
 
   return (
     <motion.div
@@ -153,28 +144,25 @@ export default function AccountDetailPage() {
 
       {/* Account Header */}
       <Card className="relative overflow-hidden border-border">
-        <div className={`absolute top-0 left-0 w-1 h-full bg-gradient-to-b from-blue-500 via-blue-600 to-blue-700`} />
+        <div className={`absolute top-0 left-0 w-1 h-full bg-gradient-to-b ${gradient}`} />
         <CardContent className="p-6 sm:p-8">
           <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex items-start gap-4">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg">
-                <account.icon className="h-7 w-7 text-white" />
+              <div className={`flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-blue-600 shadow-lg`}>
+                <Icon className="h-7 w-7 text-white" />
               </div>
               <div>
                 <h1 className="font-display text-2xl font-bold text-text-primary">
-                  {account.name}
+                  {account.account_name}
                 </h1>
-                <p className="mt-0.5 text-sm text-text-secondary">{account.type} Account</p>
+                <p className="mt-0.5 text-sm text-text-secondary">{account.account_type} Account</p>
                 <div className="mt-3 flex flex-wrap gap-3 text-xs">
                   <span className="rounded-lg border border-border bg-bg-surface/50 px-2.5 py-1 font-mono text-text-muted">
-                    {account.accountNumber}
-                  </span>
-                  <span className="rounded-lg border border-border bg-bg-surface/50 px-2.5 py-1 font-mono text-text-muted">
-                    Routing: {account.routing}
+                    {account.account_number}
                   </span>
                   <span className="inline-flex items-center gap-1 rounded-lg bg-success/10 px-2.5 py-1 text-success">
                     <CheckCircle2 className="h-3 w-3" />
-                    Active
+                    {account.status === "active" ? "Active" : account.status}
                   </span>
                 </div>
               </div>
@@ -186,7 +174,7 @@ export default function AccountDetailPage() {
                 {fmt(account.balance)}
               </p>
               <p className="mt-1 text-xs text-text-muted">
-                Available: {fmt(account.available)}
+                Available: {fmt(account.ledger_balance || account.balance)}
               </p>
             </div>
           </div>
@@ -235,108 +223,117 @@ export default function AccountDetailPage() {
                 <option value="failed">Failed</option>
               </select>
             </div>
-            <button className="flex h-8 w-8 items-center justify-center rounded-lg text-text-muted transition-colors hover:bg-accent hover:text-text-primary">
-              <Search className="h-4 w-4" />
-            </button>
           </div>
         </CardHeader>
         <CardContent className="p-0">
-          <div className="mt-4 overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border">
-                  <th className="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">
-                    Description
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">
-                    Date
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-text-muted uppercase tracking-wider">
-                    Amount
-                  </th>
-                  <th className="px-6 py-3 text-right text-xs font-medium text-text-muted uppercase tracking-wider">
-                    Reference
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {filteredTxs.map((tx, i) => {
-                  const StatusIcon = statusConfig[tx.status as keyof typeof statusConfig]?.icon || CheckCircle2;
-                  return (
-                    <motion.tr
-                      key={tx.id}
-                      initial={{ opacity: 0, x: -8 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: i * 0.03 }}
-                      className="group transition-colors hover:bg-accent/50 cursor-pointer"
-                    >
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div
+          {filteredTxs.length > 0 ? (
+            <div className="mt-4 overflow-x-auto">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">
+                      Description
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">
+                      Date
+                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-text-muted uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-text-muted uppercase tracking-wider">
+                      Amount
+                    </th>
+                    <th className="px-6 py-3 text-right text-xs font-medium text-text-muted uppercase tracking-wider">
+                      Reference
+                    </th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {filteredTxs.map((tx, i) => {
+                    const isIncoming = tx.to_account_id === account.id;
+                    const StatusIcon = statusConfig[tx.status]?.icon || CheckCircle2;
+                    return (
+                      <motion.tr
+                        key={tx.id}
+                        initial={{ opacity: 0, x: -8 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        transition={{ delay: i * 0.03 }}
+                        className="group transition-colors hover:bg-accent/50 cursor-pointer"
+                      >
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div
+                              className={cn(
+                                "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
+                                isIncoming
+                                  ? "bg-success/10"
+                                  : "bg-destructive/10"
+                              )}
+                            >
+                              {isIncoming ? (
+                                <ArrowDownRight className="h-4 w-4 text-success" />
+                              ) : (
+                                <ArrowUpRight className="h-4 w-4 text-destructive" />
+                              )}
+                            </div>
+                            <div>
+                              <p className="text-sm font-medium text-text-primary">
+                                {tx.description || tx.type}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <p className="text-sm text-text-secondary">
+                            {new Date(tx.created_at).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                              year: "numeric",
+                            })}
+                          </p>
+                          <p className="text-xs text-text-muted">
+                            {new Date(tx.created_at).toLocaleTimeString("en-US", {
+                              hour: "numeric",
+                              minute: "2-digit",
+                            })}
+                          </p>
+                        </td>
+                        <td className="px-6 py-4">
+                          <span className="inline-flex items-center gap-1 text-xs font-medium">
+                            <StatusIcon
+                              className={cn(
+                                "h-3.5 w-3.5",
+                                statusConfig[tx.status]?.class
+                              )}
+                            />
+                            <span className="capitalize text-text-secondary">
+                              {tx.status}
+                            </span>
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <span
                             className={cn(
-                              "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
-                              tx.type === "incoming"
-                                ? "bg-success/10"
-                                : "bg-destructive/10"
+                              "text-sm font-semibold",
+                              isIncoming ? "text-success" : "text-text-primary"
                             )}
                           >
-                            {tx.type === "incoming" ? (
-                              <ArrowDownRight className="h-4 w-4 text-success" />
-                            ) : (
-                              <ArrowUpRight className="h-4 w-4 text-destructive" />
-                            )}
-                          </div>
-                          <div>
-                            <p className="text-sm font-medium text-text-primary">
-                              {tx.description}
-                            </p>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <p className="text-sm text-text-secondary">{tx.date}</p>
-                        <p className="text-xs text-text-muted">{tx.time}</p>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span className="inline-flex items-center gap-1 text-xs font-medium">
-                          <StatusIcon
-                            className={cn(
-                              "h-3.5 w-3.5",
-                              statusConfig[tx.status as keyof typeof statusConfig]?.class
-                            )}
-                          />
-                          <span className="capitalize text-text-secondary">
-                            {tx.status}
+                            {isIncoming ? "+" : "-"}
+                            {fmt(Math.abs(tx.amount))}
                           </span>
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <span
-                          className={cn(
-                            "text-sm font-semibold",
-                            tx.type === "incoming" ? "text-success" : "text-text-primary"
-                          )}
-                        >
-                          {tx.type === "incoming" ? "+" : ""}
-                          {fmt(Math.abs(tx.amount))}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <span className="text-xs font-mono text-text-muted">
-                          {tx.reference}
-                        </span>
-                      </td>
-                    </motion.tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-
-          {filteredTxs.length === 0 && (
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <span className="text-xs font-mono text-text-muted">
+                            {tx.transaction_ref}
+                          </span>
+                        </td>
+                      </motion.tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          ) : (
             <div className="px-6 py-12 text-center">
               <p className="text-sm text-text-muted">No transactions found.</p>
             </div>

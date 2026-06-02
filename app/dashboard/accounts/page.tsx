@@ -16,78 +16,28 @@ import {
   MoreHorizontal,
   CheckCircle2,
   Clock,
+  Loader2,
+  Landmark,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useAccounts } from "@/hooks/use-banking";
+import type { BankAccount } from "@/hooks/use-banking";
 
-/* ── Accounts data ──────────────────────────────────────────── */
-const accounts = [
-  {
-    id: "1",
-    name: "Premium Checking",
-    type: "Checking",
-    number: "•••• 8842",
-    accountNumber: "SB-4002-8842-1193",
-    balance: 45280.50,
-    available: 45280.50,
-    currency: "USD",
-    status: "active",
-    change: "+2.4%",
-    icon: Wallet,
-    gradient: "from-blue-500 to-blue-600",
-    opened: "Jan 15, 2025",
-  },
-  {
-    id: "2",
-    name: "High-Yield Savings",
-    type: "Savings",
-    number: "•••• 5567",
-    accountNumber: "SB-7001-5567-4421",
-    balance: 128500.00,
-    available: 128500.00,
-    currency: "USD",
-    status: "active",
-    change: "+4.1%",
-    icon: PiggyBank,
-    gradient: "from-emerald-500 to-emerald-600",
-    opened: "Mar 3, 2025",
-  },
-  {
-    id: "3",
-    name: "Platinum Credit Card",
-    type: "Credit",
-    number: "•••• 3391",
-    accountNumber: "SB-9003-3391-7782",
-    balance: 4500.00,
-    available: 5500.00,
-    currency: "USD",
-    status: "active",
-    change: "-$2,300",
-    icon: CreditCard,
-    gradient: "from-purple-500 to-purple-600",
-    opened: "Feb 20, 2025",
-  },
-  {
-    id: "4",
-    name: "Business Account",
-    type: "Business Checking",
-    number: "•••• 2219",
-    accountNumber: "SB-6005-2219-3340",
-    balance: 89200.00,
-    available: 89200.00,
-    currency: "USD",
-    status: "active",
-    change: "+12.8%",
-    icon: Wallet,
-    gradient: "from-amber-500 to-amber-600",
-    opened: "Apr 10, 2025",
-  },
-];
-
-/* ── Currency formatter ─────────────────────────────────────── */
-const fmt = (n: number) =>
-  new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(n);
+/* ── Icon map ────────────────────────────────────────────────── */
+const iconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+  Checking: Wallet,
+  Savings: PiggyBank,
+  Credit: CreditCard,
+  "Business Checking": Landmark,
+};
+const gradientMap: Record<string, string> = {
+  Checking: "from-blue-500 to-blue-600",
+  Savings: "from-emerald-500 to-emerald-600",
+  Credit: "from-purple-500 to-purple-600",
+  "Business Checking": "from-amber-500 to-amber-600",
+};
 
 /* ── Container variants ─────────────────────────────────────── */
 const containerVariants = {
@@ -105,8 +55,47 @@ const itemVariants = {
 /* ── Accounts Page ───────────────────────────────────────────── */
 export default function AccountsPage() {
   const [showBalances, setShowBalances] = useState(true);
+  const { accounts, loading, totalBalance, fmt } = useAccounts();
 
-  const totalBalance = accounts.reduce((s, a) => s + a.balance, 0);
+  const activeAccounts = accounts.filter((a) => a.status === "active");
+  const totalCredit = accounts
+    .filter((a) => a.account_type === "Credit")
+    .reduce((s, a) => s + a.balance, 0);
+
+  /* ── Loading ──────────────────────────────────────────────── */
+  if (loading) {
+    return (
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="flex flex-col items-center justify-center py-24"
+      >
+        <Loader2 className="h-8 w-8 animate-spin text-text-muted" />
+        <p className="mt-4 text-sm text-text-muted">Loading your accounts…</p>
+      </motion.div>
+    );
+  }
+
+  /* ── Empty state ──────────────────────────────────────────── */
+  if (!accounts.length) {
+    return (
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="flex flex-col items-center justify-center py-24"
+      >
+        <Wallet className="h-12 w-12 text-text-muted" />
+        <h2 className="mt-4 font-display text-xl font-bold text-text-primary">No accounts yet</h2>
+        <p className="mt-1 text-sm text-text-muted">Open your first account to get started.</p>
+        <Button className="mt-6 gap-1.5">
+          <Plus className="h-4 w-4" />
+          Open Account
+        </Button>
+      </motion.div>
+    );
+  }
 
   return (
     <motion.div
@@ -144,10 +133,10 @@ export default function AccountsPage() {
       <motion.div variants={itemVariants}>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
           {[
-            { label: "Total Balance", value: fmt(totalBalance), change: "+6.2%" },
-            { label: "Active Accounts", value: "4", change: "" },
-            { label: "This Month Interest", value: fmt(312.43), change: "" },
-            { label: "Available Credit", value: fmt(5500), change: "" },
+            { label: "Total Balance", value: fmt(totalBalance), change: "" },
+            { label: "Active Accounts", value: String(activeAccounts.length), change: "" },
+            { label: "This Month Interest", value: fmt(0), change: "" },
+            { label: "Available Credit", value: totalCredit > 0 ? fmt(totalCredit) : "—", change: "" },
           ].map((stat) => (
             <Card key={stat.label} className="border-border">
               <CardContent className="p-4">
@@ -168,65 +157,74 @@ export default function AccountsPage() {
 
       {/* Accounts grid */}
       <motion.div variants={itemVariants} className="grid gap-4 sm:grid-cols-2">
-        {accounts.map((account) => (
-          <Link
-            key={account.id}
-            href={`/dashboard/accounts/${account.id}`}
-            className="group relative overflow-hidden rounded-xl border border-border bg-bg-card p-5 transition-all hover:border-text-muted hover:shadow-lg hover:shadow-primary/5"
-          >
-            {/* Gradient accent line */}
-            <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${account.gradient}`} />
+        {accounts.map((account) => {
+          const Icon = iconMap[account.account_type] || Wallet;
+          const gradient = gradientMap[account.account_type] || "from-blue-500 to-blue-600";
+          return (
+            <Link
+              key={account.id}
+              href={`/dashboard/accounts/${account.id}`}
+              className="group relative overflow-hidden rounded-xl border border-border bg-bg-card p-5 transition-all hover:border-text-muted hover:shadow-lg hover:shadow-primary/5"
+            >
+              {/* Gradient accent line */}
+              <div className={`absolute top-0 left-0 right-0 h-1 bg-gradient-to-r ${gradient}`} />
 
-            <div className="flex items-start justify-between mt-1">
-              <div className="flex items-center gap-3">
-                <div className={`flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ${account.gradient} shadow-sm`}>
-                  <account.icon className="h-5.5 w-5.5 text-white" />
+              <div className="flex items-start justify-between mt-1">
+                <div className="flex items-center gap-3">
+                  <div className={`flex h-11 w-11 items-center justify-center rounded-xl bg-gradient-to-br ${gradient} shadow-sm`}>
+                    <Icon className="h-5.5 w-5.5 text-white" />
+                  </div>
+                  <div>
+                    <h3 className="font-display text-base font-semibold text-text-primary">
+                      {account.account_name}
+                    </h3>
+                    <p className="text-xs text-text-muted">{account.account_type}</p>
+                  </div>
                 </div>
+                <div className="flex items-center gap-2">
+                  <span className={cn(
+                    "inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium",
+                    account.status === "active"
+                      ? "bg-success/10 text-success"
+                      : "bg-amber-500/10 text-amber-400"
+                  )}>
+                    {account.status === "active" ? (
+                      <CheckCircle2 className="h-3 w-3" />
+                    ) : (
+                      <Clock className="h-3 w-3" />
+                    )}
+                    {account.status}
+                  </span>
+                </div>
+              </div>
+
+              <div className="mt-4 flex items-end justify-between">
                 <div>
-                  <h3 className="font-display text-base font-semibold text-text-primary">
-                    {account.name}
-                  </h3>
-                  <p className="text-xs text-text-muted">{account.type}</p>
+                  <p className="text-xs text-text-muted">Account Number</p>
+                  <p className="font-mono text-sm font-semibold text-text-primary">
+                    {account.account_number}
+                  </p>
+                </div>
+                <div className="text-right">
+                  <p className="text-xs text-text-muted">Balance</p>
+                  <p className="font-display text-lg font-bold text-text-primary">
+                    {showBalances ? fmt(account.balance) : "••••••"}
+                  </p>
                 </div>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="inline-flex items-center gap-1 rounded-full bg-success/10 px-2 py-0.5 text-[11px] font-medium text-success">
-                  <CheckCircle2 className="h-3 w-3" />
-                  {account.status}
-                </span>
-              </div>
-            </div>
 
-            <div className="mt-4 flex items-end justify-between">
-              <div>
-                <p className="text-xs text-text-muted">Account Number</p>
-                <p className="font-mono text-sm font-semibold text-text-primary">
-                  {account.accountNumber}
+              <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
+                <p className="text-xs text-text-muted">
+                  Opened {new Date(account.opened_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
                 </p>
+                <div className="flex items-center gap-1 text-xs font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">
+                  View Details
+                  <ArrowUpRight className="h-3.5 w-3.5" />
+                </div>
               </div>
-              <div className="text-right">
-                <p className="text-xs text-text-muted">Balance</p>
-                <p className="font-display text-lg font-bold text-text-primary">
-                  {showBalances ? fmt(account.balance) : "••••••"}
-                </p>
-                <p className={cn(
-                  "mt-0.5 text-xs font-medium",
-                  account.change.startsWith("+") ? "text-success" : "text-destructive"
-                )}>
-                  {account.change} this month
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
-              <p className="text-xs text-text-muted">Opened {account.opened}</p>
-              <div className="flex items-center gap-1 text-xs font-medium text-primary opacity-0 transition-opacity group-hover:opacity-100">
-                View Details
-                <ArrowUpRight className="h-3.5 w-3.5" />
-              </div>
-            </div>
-          </Link>
-        ))}
+            </Link>
+          );
+        })}
       </motion.div>
     </motion.div>
   );
