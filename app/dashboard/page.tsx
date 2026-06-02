@@ -19,10 +19,7 @@ import {
   EyeOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useUser } from "@/lib/auth";
-import { createClient } from "@/utils/supabase/client";
+import { useAccounts, useRecentTransactions } from "@/hooks/use-banking";
 
 /* ── Quick Actions ──────────────────────────────────────────── */
 const quickActions = [
@@ -31,27 +28,6 @@ const quickActions = [
   { label: "Withdraw", href: "/dashboard/withdraw", icon: Minus, color: "from-amber-500/20 to-amber-600/10", accent: "text-amber-400" },
   { label: "Pay Bills", href: "/dashboard/bill-pay", icon: Receipt, color: "from-purple-500/20 to-purple-600/10", accent: "text-purple-400" },
 ];
-
-/* ── Sample transactions ────────────────────────────────────── */
-const recentTransactions: {
-  id: number;
-  description: string;
-  amount: number;
-  date: string;
-  type: string;
-  account: string;
-}[] = [];
-
-/* ── Account summary cards ──────────────────────────────────── */
-const accounts: {
-  name: string;
-  type: string;
-  number: string;
-  balance: number;
-  change: string;
-  icon: any;
-  gradient: string;
-}[] = [];
 
 /* ── Currency formatter ─────────────────────────────────────── */
 const fmt = (n: number) =>
@@ -78,9 +54,8 @@ const itemVariants = {
 /* ── Dashboard Overview Page ─────────────────────────────────── */
 export default function DashboardOverview() {
   const [showBalances, setShowBalances] = useState(true);
-  const [totalBalance, setTotalBalance] = useState(fmt(0.00));
-
-  const totalBalanceNum = 0;
+  const { accounts, loading: acctsLoading, totalBalance, fmt } = useAccounts();
+  const { transactions: recentTransactions, loading: txLoading } = useRecentTransactions(6);
 
   return (
     <motion.div
@@ -119,7 +94,7 @@ export default function DashboardOverview() {
             </div>
             <div className="mt-3 flex items-baseline gap-3">
               <span className="font-display text-4xl font-bold tracking-tight text-text-primary sm:text-5xl">
-                {showBalances ? fmt(totalBalanceNum) : "••••••"}
+                {showBalances ? fmt(totalBalance) : "••••••"}
               </span>
               <span className="inline-flex items-center gap-0.5 rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-semibold text-success">
                 <TrendingUp className="h-3 w-3" />
@@ -170,33 +145,35 @@ export default function DashboardOverview() {
             </Link>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
-            {accounts.map((account) => (
+            {accounts.length === 0 ? (
+              <div className="col-span-2 rounded-xl border border-border bg-bg-card p-6 text-center">
+                <Wallet className="mx-auto mb-3 h-8 w-8 text-text-muted" />
+                <p className="text-sm font-medium text-text-primary">No accounts yet</p>
+                <p className="mt-1 text-xs text-text-muted">Your accounts will appear here once created.</p>
+              </div>
+            ) : (
+              accounts.map((account) => (
               <Link
-                key={account.name}
-                href="/dashboard/accounts"
+                key={account.id}
+                href={`/dashboard/accounts/${account.id}`}
                 className="group relative overflow-hidden rounded-xl border border-border bg-bg-card p-5 transition-all hover:border-text-muted hover:shadow-lg"
               >
                 <div className="flex items-start justify-between">
-                  <div className={`flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br ${account.gradient} shadow-sm`}>
-                    <account.icon className="h-5 w-5 text-white" />
+                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-primary/70 shadow-sm">
+                    <Wallet className="h-5 w-5 text-white" />
                   </div>
-                  <span className="text-xs text-text-muted">{account.number}</span>
+                  <span className="text-xs text-text-muted">{account.account_number?.slice(-4) || "••••"}</span>
                 </div>
                 <div className="mt-4">
-                  <p className="text-sm font-medium text-text-primary">{account.name}</p>
-                  <p className="text-xs text-text-muted mt-0.5">{account.type}</p>
+                  <p className="text-sm font-medium text-text-primary">{account.account_name}</p>
+                  <p className="text-xs text-text-muted mt-0.5">{account.account_type}</p>
                   <p className="mt-2 font-display text-xl font-bold text-text-primary">
                     {showBalances ? fmt(account.balance) : "••••••"}
                   </p>
-                  <p className={cn(
-                    "mt-1 text-xs font-medium",
-                    account.change.startsWith("+") ? "text-success" : "text-destructive"
-                  )}>
-                    {account.change} this month
-                  </p>
                 </div>
               </Link>
-            ))}
+            ))
+            )}
           </div>
         </motion.div>
 
@@ -212,7 +189,12 @@ export default function DashboardOverview() {
           </div>
           <Card className="border-border">
             <div className="divide-y divide-border">
-              {recentTransactions.map((tx, i) => (
+              {txLoading ? (
+                <div className="px-4 py-8 text-center text-sm text-text-muted">Loading transactions...</div>
+              ) : recentTransactions.length === 0 ? (
+                <div className="px-4 py-8 text-center text-sm text-text-muted">No transactions yet</div>
+              ) : (
+                recentTransactions.map((tx, i) => (
                 <motion.div
                   key={tx.id}
                   initial={{ opacity: 0, x: -8 }}
@@ -223,11 +205,11 @@ export default function DashboardOverview() {
                   <div className="flex items-center gap-3 min-w-0">
                     <div className={cn(
                       "flex h-8 w-8 shrink-0 items-center justify-center rounded-lg",
-                      tx.type === "incoming"
+                      tx.type === "deposit" || (tx.to_account_id && !tx.from_account_id)
                         ? "bg-success/10 text-success"
                         : "bg-destructive/10 text-destructive"
                     )}>
-                      {tx.type === "incoming" ? (
+                      {tx.type === "deposit" || (tx.to_account_id) ? (
                         <ArrowDownRight className="h-4 w-4" />
                       ) : (
                         <ArrowUpRight className="h-4 w-4" />
@@ -235,21 +217,21 @@ export default function DashboardOverview() {
                     </div>
                     <div className="min-w-0">
                       <p className="text-sm font-medium text-text-primary truncate">
-                        {tx.description}
+                        {tx.description || tx.type}
                       </p>
                       <p className="text-xs text-text-muted">
-                        {tx.date} &middot; {tx.account}
+                        {new Date(tx.created_at).toLocaleDateString()} &middot; {tx.transaction_ref?.slice(0, 12)}
                       </p>
                     </div>
                   </div>
                   <span className={cn(
                     "shrink-0 text-sm font-semibold",
-                    tx.type === "incoming" ? "text-success" : "text-text-primary"
+                    tx.type === "deposit" ? "text-success" : "text-text-primary"
                   )}>
-                    {tx.type === "incoming" ? "+" : ""}{fmt(Math.abs(tx.amount))}
+                    {tx.type === "deposit" ? "+" : ""}{fmt(Math.abs(tx.amount))}
                   </span>
                 </motion.div>
-              ))}
+              )))}
             </div>
             <div className="border-t border-border p-3">
               <Link
