@@ -53,7 +53,7 @@ export default function DashboardLayout({
         // Fetch user's accounts from Supabase
         const supabase = createClient();
         const { data: accounts, error } = await supabase
-          .from("accounts")
+          .from("bank_accounts")
           .select("*")
           .eq("user_id", user?.id)
           .limit(1);
