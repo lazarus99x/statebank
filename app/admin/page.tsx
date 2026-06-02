@@ -40,27 +40,15 @@ export default function AdminPage() {
       return;
     }
 
-    // Check if user has admin role in admin_profiles
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("id")
-      .eq("user_id", user.id)
-      .single();
+    // Call API route that uses service role key to bypass RLS
+    const res = await fetch("/api/check-admin");
+    const data = await res.json();
 
-    if (profile) {
-      const { data: adminProfile } = await supabase
-        .from("admin_profiles")
-        .select("role")
-        .eq("user_id", profile.id)
-        .single();
-
-      if (adminProfile?.role?.toLowerCase() === "admin") {
-        setAuthState("admin");
-        return;
-      }
+    if (data.isAdmin) {
+      setAuthState("admin");
+    } else {
+      setAuthState("denied");
     }
-
-    setAuthState("denied");
   }
 
   async function handleAdminLogin(e: React.FormEvent) {
