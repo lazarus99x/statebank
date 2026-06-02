@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAccounts, useRecentTransactions } from "@/hooks/use-banking";
+import { Card, CardContent } from "@/components/ui/card";
 
 /* ── Quick Actions ──────────────────────────────────────────── */
 const quickActions = [
