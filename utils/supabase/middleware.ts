@@ -48,13 +48,8 @@ export async function updateSession(request: NextRequest) {
   const isNextInternal =
     pathname.startsWith("/_next") || pathname === "/favicon.ico";
 
-  // --- Admin route protection (just needs to be logged in) ---
+  // --- Admin route — let page handle auth ---
   if (pathname.startsWith("/admin")) {
-    if (!user) {
-      const url = request.nextUrl.clone();
-      url.pathname = "/sign-in";
-      return NextResponse.redirect(url);
-    }
     return supabaseResponse;
   }
 

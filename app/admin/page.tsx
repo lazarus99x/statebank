@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,12 +11,181 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Users, Building2, ArrowUpDown, Download, Upload, DollarSign, Shield, Headphones, Settings,
   Search, CheckCircle, XCircle, Clock, Ban, Trash2, Key, ChevronDown, ChevronUp,
-  TrendingUp, BarChart3, FileText, Wallet, RefreshCw, MessageSquare, Plus
+  TrendingUp, BarChart3, FileText, Wallet, RefreshCw, MessageSquare, Plus, Lock, Eye, EyeOff, Loader2
 } from "lucide-react";
 import { toast } from "sonner";
+import { createClient } from "@/utils/supabase/client";
 
 export default function AdminPage() {
+  const router = useRouter();
+  const [authState, setAuthState] = useState<"loading" | "login" | "denied" | "admin">("loading");
   const [activeTab, setActiveTab] = useState("overview");
+
+  // Admin login form
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    checkAdminAccess();
+  }, []);
+
+  async function checkAdminAccess() {
+    const supabase = createClient();
+    const { data: { user } } = await supabase.auth.getUser();
+
+    if (!user) {
+      setAuthState("login");
+      return;
+    }
+
+    // Check if user has admin role in admin_profiles
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("user_id", user.id)
+      .single();
+
+    if (profile) {
+      const { data: adminProfile } = await supabase
+        .from("admin_profiles")
+        .select("role")
+        .eq("user_id", profile.id)
+        .single();
+
+      if (adminProfile?.role?.toLowerCase() === "admin") {
+        setAuthState("admin");
+        return;
+      }
+    }
+
+    setAuthState("denied");
+  }
+
+  async function handleAdminLogin(e: React.FormEvent) {
+    e.preventDefault();
+    if (!email || !password) {
+      toast.error("Please enter your admin credentials");
+      return;
+    }
+
+    setIsLoading(true);
+    const supabase = createClient();
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+
+    if (error) {
+      setIsLoading(false);
+      toast.error(error.message);
+      return;
+    }
+
+    // Re-check admin access after login
+    await checkAdminAccess();
+    setIsLoading(false);
+  }
+
+  // --- Show login form ---
+  if (authState === "login") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#0b1120] p-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="w-full max-w-sm"
+        >
+          <div className="mb-8 text-center">
+            <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600/20 to-blue-600/5 ring-1 ring-blue-500/20">
+              <Shield className="h-7 w-7 text-blue-500" />
+            </div>
+            <h1 className="text-2xl font-bold text-white">Admin Sign In</h1>
+            <p className="mt-2 text-sm text-white/40">Authorized personnel only</p>
+          </div>
+
+          <form onSubmit={handleAdminLogin} className="space-y-4">
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-white/60">Admin Email</label>
+              <input
+                type="email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                placeholder="admin@statebank.com"
+                className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-sm text-white placeholder:text-white/30 focus:border-blue-500/50 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+              />
+            </div>
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-white/60">Password</label>
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  placeholder="••••••••"
+                  className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 pr-11 text-sm text-white placeholder:text-white/30 focus:border-blue-500/50 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white/60"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
+              </div>
+            </div>
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-blue-600 text-sm font-semibold text-white transition-all hover:bg-blue-700 active:scale-[0.98] disabled:opacity-60"
+            >
+              {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              {isLoading ? "Signing in..." : "Sign In to Admin"}
+            </button>
+          </form>
+
+          <p className="mt-4 text-center text-xs text-white/30">
+            <Link href="/" className="underline underline-offset-2 hover:text-white/50">Back to Home</Link>
+          </p>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // --- Access denied ---
+  if (authState === "denied") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#0b1120] p-4">
+        <div className="text-center max-w-sm">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-red-500/10 ring-1 ring-red-500/20">
+            <Shield className="h-7 w-7 text-red-500" />
+          </div>
+          <h1 className="text-xl font-bold text-white">Access Denied</h1>
+          <p className="mt-2 text-sm text-white/40">You don&apos;t have admin privileges. Sign in with an admin account.</p>
+          <div className="mt-6 flex gap-3 justify-center">
+            <button onClick={() => { createClient().auth.signOut(); setAuthState("login"); }}
+              className="rounded-xl border border-white/10 px-5 py-2.5 text-sm text-white/60 hover:bg-white/5">
+              Sign Out
+            </button>
+            <Link href="/dashboard"
+              className="rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-700">
+              Go to Dashboard
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // --- Loading ---
+  if (authState === "loading") {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-[#0b1120]">
+        <div className="flex items-center gap-2 text-white/40 text-sm">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Verifying access...
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
