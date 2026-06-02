@@ -18,7 +18,6 @@ import {
   CheckCircle2,
   Star,
   Quote,
-  Play,
 } from "lucide-react";
 
 /* ── Free Unsplash Images (CC0, no watermark) ──────────────── */

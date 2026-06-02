@@ -115,7 +115,10 @@ function OverviewTab() {
       <Card className="p-4 sm:p-6 border-border bg-card">
         <h3 className="text-lg font-semibold mb-4">Recent Transactions</h3>
         <div className="space-y-3">
-          {[...Array(5)].map((_, i) => (
+          {[...Array(5)].map((_, i) => {
+            const mockAmounts = [4500.00, 2500.00, 12000.50, 350.75, 890.25];
+            const mockStatuses = ["Completed", "Pending POV", "Completed", "Failed", "Completed"];
+            return (
             <div key={i} className="flex items-center justify-between py-2 border-b border-border last:border-0">
               <div className="flex items-center gap-3">
                 <div className={`p-2 rounded-full ${i % 2 === 0 ? "bg-green-500/10 text-green-500" : "bg-red-500/10 text-red-500"}`}>
@@ -128,12 +131,13 @@ function OverviewTab() {
               </div>
               <div className="text-right">
                 <p className={`text-sm font-semibold ${i % 2 === 0 ? "text-green-500" : "text-red-500"}`}>
-                  {i % 2 === 0 ? "+" : "-"}${(Math.random() * 10000).toFixed(2)}
+                  {i % 2 === 0 ? "+" : "-"}${mockAmounts[i].toFixed(2)}
                 </p>
-                <p className="text-xs text-muted-foreground">{i % 2 === 0 ? "Completed" : "Pending POV"}</p>
+                <p className="text-xs text-muted-foreground">{mockStatuses[i]}</p>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       </Card>
     </div>
