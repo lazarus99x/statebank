@@ -177,9 +177,15 @@ export default function AdminPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Admin Panel</h1>
-        <p className="text-sm text-muted-foreground mt-1">Full control over StateBank operations</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Admin Panel</h1>
+          <p className="text-sm text-muted-foreground mt-1">Full control over StateBank operations</p>
+        </div>
+        <button onClick={() => { createClient().auth.signOut().then(() => { setAuthState("login"); }); }}
+          className="flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-2 text-xs text-white/50 hover:bg-white/5 hover:text-white/80 transition-colors">
+          Sign Out
+        </button>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -575,24 +581,52 @@ function UsersTab() {
                     <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white text-xs" onClick={() => { setShowDeposit(true); setDepositUserId(u.id); toast.info("Deposit form opened"); }}>
                       <Download className="w-3 h-3 mr-1" /> Deposit
                     </Button>
-                    <Button size="sm" className="bg-orange-600 hover:bg-orange-700 text-white text-xs">
-                      <Upload className="w-3 h-3 mr-1" /> Withdraw
-                    </Button>
-                    <Button size="sm" variant="outline" className="text-xs">
-                      <Settings className="w-3 h-3 mr-1" /> Limits
-                    </Button>
-                    <Button size="sm" variant="destructive" className="text-xs">
-                      <Ban className="w-3 h-3 mr-1" /> Freeze
-                    </Button>
-                    <Button size="sm" variant="destructive" className="text-xs">
-                      <Trash2 className="w-3 h-3 mr-1" /> Delete
-                    </Button>
-                    <Button size="sm" variant="outline" className="text-xs">
-                      <Key className="w-3 h-3 mr-1" /> Assign #
-                    </Button>
-                    <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white text-xs">
-                      <CheckCircle className="w-3 h-3 mr-1" /> Verify KYC
-                    </Button>
+                    <Button size="sm" className="bg-orange-600 hover:bg-orange-700 text-white text-xs" onClick={async () => {
+                          const res = await fetch("/api/admin-action", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "withdraw", userId: u.user_id, data: { amount: 0 } }) });
+                          const d = await res.json();
+                          toast.success(d.message || "Withdrawal processed");
+                        }}>
+                          <Upload className="w-3 h-3 mr-1" /> Withdraw
+                        </Button>
+                        <Button size="sm" variant="outline" className="text-xs" onClick={async () => {
+                          const dailyLimit = prompt("Enter daily withdrawal limit:", "10000");
+                          if (!dailyLimit) return;
+                          const res = await fetch("/api/admin-action", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "limits", userId: u.user_id, data: { dailyLimit: parseInt(dailyLimit) } }) });
+                          const d = await res.json();
+                          toast.success(d.message || "Limits updated");
+                        }}>
+                          <Settings className="w-3 h-3 mr-1" /> Limits
+                        </Button>
+                        <Button size="sm" variant="destructive" className="text-xs" onClick={async () => {
+                          const res = await fetch("/api/admin-action", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "ban", userId: u.user_id }) });
+                          const d = await res.json();
+                          toast.success(d.message || "Account frozen");
+                        }}>
+                          <Ban className="w-3 h-3 mr-1" /> Freeze
+                        </Button>
+                        <Button size="sm" variant="destructive" className="text-xs" onClick={async () => {
+                          if (!confirm("Are you sure you want to close this user's accounts?")) return;
+                          const res = await fetch("/api/admin-action", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "delete", userId: u.user_id }) });
+                          const d = await res.json();
+                          toast.success(d.message || "Accounts closed");
+                        }}>
+                          <Trash2 className="w-3 h-3 mr-1" /> Close Accounts
+                        </Button>
+                        <Button size="sm" variant="outline" className="text-xs" onClick={async () => {
+                          const res = await fetch("/api/admin-action", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "assign_number", userId: u.user_id }) });
+                          const d = await res.json();
+                          if (d.success) toast.success(d.message);
+                          else toast.error(d.error);
+                        }}>
+                          <Key className="w-3 h-3 mr-1" /> Assign #
+                        </Button>
+                        <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white text-xs" onClick={async () => {
+                          const res = await fetch("/api/admin-action", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "verify_kyc", userId: u.user_id }) });
+                          const d = await res.json();
+                          toast.success(d.message || "KYC verified");
+                        }}>
+                          <CheckCircle className="w-3 h-3 mr-1" /> Verify KYC
+                        </Button>
                   </div>
 
                   {showDeposit && depositUserId === u.id && (
