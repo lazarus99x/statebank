@@ -62,16 +62,19 @@ export default function DashboardSidebar({
         )}
       </AnimatePresence>
 
-      {/* Sidebar */}
+      {/* Sidebar - always visible on desktop, overlay on mobile */}
       <motion.aside
         initial={false}
         animate={{
-          x: open ? 0 : "-100%",
+          x: 0, // Always at x:0 — desktop shows via lg:relative, mobile shows via overlay
         }}
         transition={{ type: "spring", damping: 30, stiffness: 300 }}
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-border bg-bg-base lg:relative lg:translate-x-0",
-          "lg:z-auto"
+          "fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-border bg-bg-base",
+          "lg:relative",
+          // Show/hide on mobile based on open state
+          open ? "translate-x-0" : "-translate-x-full",
+          "lg:translate-x-0"
         )}
       >
         {/* Brand */}

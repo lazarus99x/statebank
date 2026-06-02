@@ -4,9 +4,8 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/utils/supabase/client";
 import { motion } from "framer-motion";
-import { Building2, Shield } from "lucide-react";
+import { Shield } from "lucide-react";
 
-/* ── Admin Layout ───────────────────────────────────────────── */
 export default function AdminLayout({
   children,
 }: {
@@ -34,23 +33,13 @@ export default function AdminLayout({
         return;
       }
 
-      // Fetch user's role from the profiles table
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .single();
+      // Check if user has an admin profile by calling an API route
+      const res = await fetch("/api/check-admin");
+      const data = await res.json();
 
       if (cancelled) return;
 
-      if (profileError || !profile) {
-        console.warn("Admin check failed:", profileError?.message);
-        setStatus("redirecting");
-        router.replace("/sign-in");
-        return;
-      }
-
-      if (profile.role !== "admin") {
+      if (!data.isAdmin) {
         setStatus("redirecting");
         router.replace("/dashboard");
         return;
@@ -66,7 +55,6 @@ export default function AdminLayout({
     };
   }, [router]);
 
-  /* ── Loading state ──────────────────────────────────────────── */
   if (status === "loading") {
     return (
       <div className="flex min-h-screen items-center justify-center bg-[#0b1120]">

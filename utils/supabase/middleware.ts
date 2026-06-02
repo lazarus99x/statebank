@@ -57,23 +57,8 @@ export async function updateSession(request: NextRequest) {
       return NextResponse.redirect(url);
     }
 
-    // Must have admin role
-    const { data: profile } = await supabase
-      .from("profiles")
-      .select("role")
-      .eq("user_id", user.id)
-      .single();
-
-    const isAdmin = profile?.role?.toLowerCase() === "admin";
-
-    if (!isAdmin) {
-      // Signed-in but not an admin → redirect to dashboard
-      const url = request.nextUrl.clone();
-      url.pathname = "/dashboard";
-      return NextResponse.redirect(url);
-    }
-
-    // User is a verified admin — allow through
+    // Let the client-side admin layout handle role verification
+    // via /api/check-admin endpoint (uses service role key)
     return supabaseResponse;
   }
 

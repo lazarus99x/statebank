@@ -120,28 +120,30 @@ export default function SettingsPage() {
       {/* Tabs */}
       <motion.div variants={itemVariants}>
         <Tabs defaultValue="profile" className="w-full">
-          <TabsList className="w-full grid grid-cols-3 md:grid-cols-5">
-            <TabsTrigger value="profile" className="gap-1.5">
+<div className="overflow-x-auto -mx-3 px-3 pb-2">
+          <TabsList className="inline-flex w-max gap-1 bg-muted/50 p-1">
+            <TabsTrigger value="profile" className="gap-1.5 shrink-0">
               <User className="h-4 w-4" />
-              <span className="hidden sm:inline">Profile</span>
+              <span>Profile</span>
             </TabsTrigger>
-            <TabsTrigger value="security" className="gap-1.5">
-              <Shield className="h-4 w-4" />
-              <span className="hidden sm:inline">Security</span>
+            <TabsTrigger value="security" className="gap-1.5 shrink-0">
+              <Lock className="h-4 w-4" />
+              <span>Security</span>
             </TabsTrigger>
-            <TabsTrigger value="notifications" className="gap-1.5">
+            <TabsTrigger value="notifications" className="gap-1.5 shrink-0">
               <Bell className="h-4 w-4" />
-              <span className="hidden sm:inline">Notifications</span>
+              <span>Notifications</span>
             </TabsTrigger>
-            <TabsTrigger value="preferences" className="gap-1.5">
-              <Palette className="h-4 w-4" />
-              <span className="hidden sm:inline">Preferences</span>
+            <TabsTrigger value="preferences" className="gap-1.5 shrink-0">
+              <Globe className="h-4 w-4" />
+              <span>Preferences</span>
             </TabsTrigger>
-            <TabsTrigger value="devices" className="gap-1.5">
+            <TabsTrigger value="devices" className="gap-1.5 shrink-0">
               <Smartphone className="h-4 w-4" />
-              <span className="hidden sm:inline">Devices</span>
+              <span>Devices</span>
             </TabsTrigger>
           </TabsList>
+          </div>
 
           {/* ── Profile Tab ───────────────────────────────────── */}
           <TabsContent value="profile">

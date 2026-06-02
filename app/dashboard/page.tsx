@@ -33,21 +33,25 @@ const quickActions = [
 ];
 
 /* ── Sample transactions ────────────────────────────────────── */
-const recentTransactions = [
-  { id: 1, description: "Wire Transfer - John Doe", amount: -2500, date: "Today, 2:34 PM", type: "outgoing", account: "Checking ••8842" },
-  { id: 2, description: "Salary Deposit - Acme Corp", amount: 8750, date: "Today, 9:15 AM", type: "incoming", account: "Checking ••8842" },
-  { id: 3, description: "Amazon.com Purchase", amount: -189.99, date: "Yesterday, 4:22 PM", type: "outgoing", account: "Credit ••3391" },
-  { id: 4, description: "Transfer from Savings", amount: 500, date: "Yesterday, 1:00 PM", type: "incoming", account: "Checking ••8842" },
-  { id: 5, description: "Netflix Subscription", amount: -15.99, date: "Jun 1, 2026", type: "outgoing", account: "Credit ••3391" },
-  { id: 6, description: "Interest Payment", amount: 12.43, date: "Jun 1, 2026", type: "incoming", account: "Savings ••5567" },
-];
+const recentTransactions: {
+  id: number;
+  description: string;
+  amount: number;
+  date: string;
+  type: string;
+  account: string;
+}[] = [];
 
 /* ── Account summary cards ──────────────────────────────────── */
-const accounts = [
-  { name: "Premium Checking", type: "Checking", number: "•••• 8842", balance: 45280.50, change: "+2.4%", icon: Wallet, gradient: "from-blue-500 to-blue-600" },
-  { name: "High-Yield Savings", type: "Savings", number: "•••• 5567", balance: 128500.00, change: "+4.1%", icon: PiggyBank, gradient: "from-emerald-500 to-emerald-600" },
-  { name: "Platinum Credit", type: "Credit", number: "•••• 3391", balance: 4500.00, change: "-$2,300", icon: CreditCard, gradient: "from-purple-500 to-purple-600" },
-];
+const accounts: {
+  name: string;
+  type: string;
+  number: string;
+  balance: number;
+  change: string;
+  icon: any;
+  gradient: string;
+}[] = [];
 
 /* ── Currency formatter ─────────────────────────────────────── */
 const fmt = (n: number) =>
@@ -74,11 +78,9 @@ const itemVariants = {
 /* ── Dashboard Overview Page ─────────────────────────────────── */
 export default function DashboardOverview() {
   const [showBalances, setShowBalances] = useState(true);
-  const [totalBalance, setTotalBalance] = useState(fmt(173780.50));
+  const [totalBalance, setTotalBalance] = useState(fmt(0.00));
 
-  const totalBalanceNum = accounts
-    .filter((a) => a.type !== "Credit")
-    .reduce((sum, a) => sum + a.balance, 0);
+  const totalBalanceNum = 0;
 
   return (
     <motion.div
@@ -91,10 +93,10 @@ export default function DashboardOverview() {
       <motion.div variants={itemVariants} className="flex items-center justify-between">
         <div>
           <h1 className="font-display text-2xl font-bold tracking-tight text-text-primary">
-            Good morning, <span className="text-primary">Alex</span>
+            Welcome to StateBank
           </h1>
           <p className="mt-1 text-sm text-text-secondary">
-            Here&apos;s your financial overview for today.
+            Your account is ready. Start by making a deposit or setting up your profile.
           </p>
         </div>
         <button
