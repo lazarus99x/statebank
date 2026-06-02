@@ -25,8 +25,8 @@ export async function POST(request: Request) {
 
       case "assign_number": {
         // Generate a new account number for the user's first account
-        const { default: genNum } = await import("@/lib/account-number");
-        const num = await genNum.generateAccountNumber();
+        const { generateAccountNumber } = await import("@/lib/account-number");
+        const num = await generateAccountNumber();
         const { data: acct } = await adminClient
           .from("bank_accounts")
           .select("id")
