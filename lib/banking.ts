@@ -1,5 +1,3 @@
-import { v4 as uuidv4 } from "uuid";
-
 /**
  * Generate a unique account number in format: STBK-XXXX-XXXX-XX
  * where the last digit is a Luhn checksum
