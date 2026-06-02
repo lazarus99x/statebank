@@ -48,17 +48,13 @@ export async function updateSession(request: NextRequest) {
   const isNextInternal =
     pathname.startsWith("/_next") || pathname === "/favicon.ico";
 
-  // --- Admin route protection (runs before general auth check) ---
+  // --- Admin route protection (just needs to be logged in) ---
   if (pathname.startsWith("/admin")) {
-    // Must be logged in first
     if (!user) {
       const url = request.nextUrl.clone();
       url.pathname = "/sign-in";
       return NextResponse.redirect(url);
     }
-
-    // Let the client-side admin layout handle role verification
-    // via /api/check-admin endpoint (uses service role key)
     return supabaseResponse;
   }
 

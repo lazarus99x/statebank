@@ -12,7 +12,7 @@ export default function AdminLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const [status, setStatus] = useState<"loading" | "admin" | "redirecting">("loading");
+  const [status, setStatus] = useState<"loading" | "ready" | "redirecting">("loading");
 
   useEffect(() => {
     let cancelled = false;
@@ -33,19 +33,7 @@ export default function AdminLayout({
         return;
       }
 
-      // Check if user has an admin profile by calling an API route
-      const res = await fetch("/api/check-admin");
-      const data = await res.json();
-
-      if (cancelled) return;
-
-      if (!data.isAdmin) {
-        setStatus("redirecting");
-        router.replace("/dashboard");
-        return;
-      }
-
-      setStatus("admin");
+      setStatus("ready");
     }
 
     checkAuth();
@@ -69,7 +57,7 @@ export default function AdminLayout({
               transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
             />
           </div>
-          <p className="text-sm text-white/40">Verifying admin credentials...</p>
+          <p className="text-sm text-white/40">Loading...</p>
         </div>
       </div>
     );
