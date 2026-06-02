@@ -606,9 +606,25 @@ function UsersTab() {
                         <input type="checkbox" id="backdate" className="accent-blue-500" />
                         <label htmlFor="backdate" className="text-xs text-muted-foreground">Back-date transaction</label>
                       </div>
-                      <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white w-full" onClick={() => { toast.success("Deposit processed"); setShowDeposit(false); }}>
-                        Process Deposit
-                      </Button>
+                      <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white w-full" onClick={async () => {
+  const amount = parseFloat(depositAmount);
+  if (!amount || amount <= 0) { toast.error("Enter a valid amount"); return; }
+  const res = await fetch("/api/admin-deposit", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ userId: u.user_id, amount, description: "Admin deposit" }),
+  });
+  const data = await res.json();
+  if (data.success) {
+    toast.success(`$${amount.toFixed(2)} deposited. New balance: $${data.newBalance.toFixed(2)}`);
+    setShowDeposit(false);
+    setDepositAmount("");
+  } else {
+    toast.error(data.error || "Deposit failed");
+  }
+}}>
+  Process Deposit
+</Button>
                     </div>
                   )}
                 </div>
