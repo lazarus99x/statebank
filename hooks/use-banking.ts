@@ -47,10 +47,19 @@ export function useAccounts() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) { setLoading(false); return; }
 
+    // Get profile UUID first — bank_accounts.user_id references profiles.id
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("id")
+      .eq("user_id", user.id)
+      .single();
+
+    if (!profile) { setLoading(false); setError("Profile not found"); return; }
+
     const { data, error: err } = await supabase
       .from("bank_accounts")
       .select("*")
-      .eq("user_id", user.id)
+      .eq("user_id", profile.id)
       .order("opened_at", { ascending: false });
 
     if (err) setError(err.message);
@@ -75,10 +84,19 @@ export function useRecentTransactions(limit = 10) {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) { setLoading(false); return; }
 
+      // Get profile UUID first
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("user_id", user.id)
+        .single();
+
+      if (!profile) { setLoading(false); return; }
+
       const { data: accounts } = await supabase
         .from("bank_accounts")
         .select("id")
-        .eq("user_id", user.id);
+        .eq("user_id", profile.id);
 
       if (!accounts?.length) { setLoading(false); return; }
 

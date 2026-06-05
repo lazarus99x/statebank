@@ -41,7 +41,7 @@ export async function signUpAction(formData: {
   // Create bank account with generated account number
   const accountNumber = await generateAccountNumber();
   const { error: accountError } = await adminClient.from("bank_accounts").insert({
-    user_id: formData.userId,
+    user_id: profile.id,
     account_number: accountNumber,
     account_name: `${formData.fullName} - ${formData.accountType.charAt(0).toUpperCase() + formData.accountType.slice(1)}`,
     account_type: formData.accountType,

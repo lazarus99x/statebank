@@ -36,7 +36,7 @@ export async function adminDepositAction(formData: {
       to_account_id: account.id,
       to_balance_before: account.balance,
       to_balance_after: account.balance + formData.amount,
-      description: formData.description || "Admin deposit",
+      description: formData.description || "Deposit",
       category: "deposit",
       initiated_by: "admin",
     })

@@ -188,9 +188,10 @@ export default function AdminPage() {
         </button>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <div className="overflow-x-auto -mx-3 px-3 pb-2">
-          <TabsList className="inline-flex w-max gap-1 bg-card/50 backdrop-blur border border-border p-1">
+<div className="flex gap-4">
+        {/* Sidebar Navigation - hidden on mobile, visible on md+ */}
+        <div className="hidden md:block w-56 shrink-0">
+          <div className="sticky top-4 space-y-1 rounded-xl border border-border bg-card/50 p-2 backdrop-blur">
             {[
               { id: "overview", label: "Overview", icon: BarChart3 },
               { id: "users", label: "Users", icon: Users },
@@ -202,46 +203,64 @@ export default function AdminPage() {
               { id: "support", label: "Support", icon: Headphones },
               { id: "settings", label: "Settings", icon: Settings },
             ].map((tab) => (
-              <TabsTrigger
+              <button
                 key={tab.id}
-                value={tab.id}
-                className="data-[state=active]:bg-blue-600 data-[state=active]:text-white text-xs sm:text-sm gap-1.5 px-3 py-1.5"
+                onClick={() => setActiveTab(tab.id)}
+                className={`flex w-full items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-all ${
+                  activeTab === tab.id
+                    ? "bg-blue-600 text-white shadow-sm"
+                    : "text-white/50 hover:bg-white/5 hover:text-white/80"
+                }`}
               >
-                <tab.icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                <span className="hidden sm:inline">{tab.label}</span>
-              </TabsTrigger>
+                <tab.icon className="h-4 w-4 shrink-0" />
+                <span>{tab.label}</span>
+              </button>
             ))}
-          </TabsList>
+          </div>
         </div>
 
-        <TabsContent value="overview" className="space-y-4 mt-4">
-          <OverviewTab />
-        </TabsContent>
-        <TabsContent value="users" className="space-y-4 mt-4">
-          <UsersTab />
-        </TabsContent>
-        <TabsContent value="transactions" className="space-y-4 mt-4">
-          <TransactionsTab />
-        </TabsContent>
-        <TabsContent value="deposits" className="space-y-4 mt-4">
-          <DepositsTab />
-        </TabsContent>
-        <TabsContent value="withdrawals" className="space-y-4 mt-4">
-          <WithdrawalsTab />
-        </TabsContent>
-        <TabsContent value="loans" className="space-y-4 mt-4">
-          <LoansTab />
-        </TabsContent>
-        <TabsContent value="pov" className="space-y-4 mt-4">
-          <POVTab />
-        </TabsContent>
-        <TabsContent value="support" className="space-y-4 mt-4">
-          <SupportTab />
-        </TabsContent>
-        <TabsContent value="settings" className="space-y-4 mt-4">
-          <SettingsTab />
-        </TabsContent>
-      </Tabs>
+        {/* Mobile horizontal tab strip */}
+        <div className="md:hidden overflow-x-auto pb-2 w-full">
+          <div className="flex gap-1 bg-card/50 backdrop-blur border border-border p-1 rounded-lg w-max">
+            {[
+              { id: "overview", label: "Overview", icon: BarChart3 },
+              { id: "users", label: "Users", icon: Users },
+              { id: "transactions", label: "Transactions", icon: ArrowUpDown },
+              { id: "deposits", label: "Deposits", icon: Download },
+              { id: "withdrawals", label: "Withdrawals", icon: Upload },
+              { id: "loans", label: "Loans", icon: DollarSign },
+              { id: "pov", label: "POV Codes", icon: Shield },
+              { id: "support", label: "Support", icon: Headphones },
+              { id: "settings", label: "Settings", icon: Settings },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className={`shrink-0 rounded-md px-3 py-1.5 text-xs font-medium transition-all ${
+                  activeTab === tab.id
+                    ? "bg-blue-600 text-white"
+                    : "text-white/50 hover:text-white/80"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Main Content */}
+        <div className="flex-1 min-w-0 space-y-4 mt-4">
+          {activeTab === "overview" && <OverviewTab />}
+          {activeTab === "users" && <UsersTab />}
+          {activeTab === "transactions" && <TransactionsTab />}
+          {activeTab === "deposits" && <DepositsTab />}
+          {activeTab === "withdrawals" && <WithdrawalsTab />}
+          {activeTab === "loans" && <LoansTab />}
+          {activeTab === "pov" && <POVTab />}
+          {activeTab === "support" && <SupportTab />}
+          {activeTab === "settings" && <SettingsTab />}
+        </div>
+      </div>
     </div>
   );
 }
@@ -322,6 +341,7 @@ interface PovCode {
 }
 
 interface PoVItem {
+  id: string;
   transaction_ref: string;
   user_name: string;
   amount: number;
@@ -348,47 +368,13 @@ function OverviewTab() {
 
   const fetchStats = useCallback(async () => {
     setLoading(true);
-    const supabase = createClient();
 
     try {
-      const [
-        { count: totalUsers },
-        { count: totalAccounts },
-        { count: pendingTxns },
-        { count: pendingDepCount },
-        { count: pendingWdCount },
-        { count: activeLoanCount },
-        { count: povPendingCount },
-        { data: volData },
-        { data: recentTxnData },
-      ] = await Promise.all([
-        supabase.from("profiles").select("*", { count: "exact", head: true }),
-        supabase.from("bank_accounts").select("*", { count: "exact", head: true }),
-        supabase.from("transactions").select("*", { count: "exact", head: true }).eq("status", "pending"),
-        supabase.from("transactions").select("*", { count: "exact", head: true }).eq("type", "deposit").eq("status", "pending"),
-        supabase.from("transactions").select("*", { count: "exact", head: true }).eq("type", "withdrawal").eq("status", "pending"),
-        supabase.from("loans").select("*", { count: "exact", head: true }).eq("status", "active"),
-        supabase.from("transactions").select("*", { count: "exact", head: true }).eq("pov_required", true).eq("pov_verified", false).not("status", "eq", "completed"),
-        supabase.from("transactions").select("amount").eq("status", "completed"),
-        supabase.from("transactions")
-          .select("id, transaction_ref, type, status, amount, from_account_id, to_account_id, description, pov_required, pov_verified, created_at, completed_at")
-          .order("created_at", { ascending: false })
-          .limit(5),
-      ]);
+      const res = await fetch("/api/admin-stats");
+      const data = await res.json();
 
-      const totalVolume = volData?.reduce((sum: number, t: { amount: number }) => sum + Number(t.amount), 0) || 0;
-
-      setStats({
-        totalUsers: totalUsers || 0,
-        totalAccounts: totalAccounts || 0,
-        pendingTxns: pendingTxns || 0,
-        pendingDeposits: pendingDepCount || 0,
-        pendingWithdrawals: pendingWdCount || 0,
-        activeLoans: activeLoanCount || 0,
-        totalVolume,
-        pendingPov: povPendingCount || 0,
-      });
-      setRecentTxns(recentTxnData || []);
+      setStats(data.stats);
+      setRecentTxns(data.recentTxns || []);
     } catch (err) {
       console.error("Failed to fetch overview stats:", err);
     } finally {
@@ -480,43 +466,32 @@ function UsersTab() {
   const [expanded, setExpanded] = useState<string | null>(null);
   const [showDeposit, setShowDeposit] = useState(false);
   const [depositAmount, setDepositAmount] = useState("");
-  const [depositAccount, setDepositAccount] = useState("");
+  const [depositDescription, setDepositDescription] = useState("");
+  const [showWithdraw, setShowWithdraw] = useState(false);
+  const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [withdrawReason, setWithdrawReason] = useState("");
   const [users, setUsers] = useState<(Profile & { accounts_count: number; total_balance: number })[]>([]);
   const [loading, setLoading] = useState(true);
   const [depositUserId, setDepositUserId] = useState<string | null>(null);
+  const [withdrawUserId, setWithdrawUserId] = useState<string | null>(null);
+  const [depositBackdate, setDepositBackdate] = useState(false);
+  const [depositDate, setDepositDate] = useState(new Date().toISOString().split('T')[0]);
+  const [withdrawBackdate, setWithdrawBackdate] = useState(false);
+  const [withdrawDate, setWithdrawDate] = useState(new Date().toISOString().split('T')[0]);
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
-    const supabase = createClient();
     try {
-      const { data: profiles } = await supabase
-        .from("profiles")
-        .select("*")
-        .order("created_at", { ascending: false });
+      const res = await fetch("/api/admin-users");
+      const data = await res.json();
 
-      if (!profiles) {
+      if (!data.users) {
         setUsers([]);
         return;
       }
 
-      // For each profile, get their account count and total balance
-      const enriched = await Promise.all(
-        profiles.map(async (p: Profile) => {
-          const { data: accounts } = await supabase
-            .from("bank_accounts")
-            .select("balance")
-            .eq("user_id", p.id);
-
-          const total_balance = accounts?.reduce((sum: number, a: { balance: number }) => sum + Number(a.balance), 0) || 0;
-          return {
-            ...p,
-            accounts_count: accounts?.length || 0,
-            total_balance,
-          };
-        })
-      );
-
-      setUsers(enriched);
+      // Data is already enriched with accounts_count and total_balance
+      setUsers(data.users);
     } catch (err) {
       console.error("Failed to fetch users:", err);
     } finally {
@@ -574,31 +549,27 @@ function UsersTab() {
                 <div className="px-4 pb-4 border-t border-border pt-3 space-y-4">
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
                     <div><span className="text-muted-foreground text-xs">Phone:</span><p className="text-foreground font-medium">{u.phone || "N/A"}</p></div>
-                    <div><span className="text-muted-foreground text-xs">Accounts:</span><p className="text-foreground font-medium">{u.accounts_count}</p></div>
-                    <div><span className="text-muted-foreground text-xs">Total Balance:</span><p className="text-foreground font-medium">${u.total_balance.toLocaleString()}</p></div>
+                    <div><span className="text-muted-foreground text-xs">Account #:</span><p className="text-foreground font-medium font-mono">{u.account_number || <span className="text-yellow-500">Not assigned</span>}</p></div>
+                    <div><span className="text-muted-foreground text-xs">Balance:</span><p className="text-foreground font-medium">${u.total_balance.toLocaleString()}</p></div>
                   </div>
                   <div className="flex flex-wrap gap-2">
                     <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white text-xs" onClick={() => { setShowDeposit(true); setDepositUserId(u.id); toast.info("Deposit form opened"); }}>
                       <Download className="w-3 h-3 mr-1" /> Deposit
                     </Button>
-                    <Button size="sm" className="bg-orange-600 hover:bg-orange-700 text-white text-xs" onClick={async () => {
-                          const res = await fetch("/api/admin-action", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "withdraw", userId: u.user_id, data: { amount: 0 } }) });
-                          const d = await res.json();
-                          toast.success(d.message || "Withdrawal processed");
-                        }}>
+                    <Button size="sm" className="bg-orange-600 hover:bg-orange-700 text-white text-xs" onClick={() => { setShowWithdraw(true); setWithdrawUserId(u.id); setWithdrawAmount(""); setWithdrawReason(""); }}>
                           <Upload className="w-3 h-3 mr-1" /> Withdraw
                         </Button>
                         <Button size="sm" variant="outline" className="text-xs" onClick={async () => {
                           const dailyLimit = prompt("Enter daily withdrawal limit:", "10000");
                           if (!dailyLimit) return;
-                          const res = await fetch("/api/admin-action", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "limits", userId: u.user_id, data: { dailyLimit: parseInt(dailyLimit) } }) });
+                          const res = await fetch("/api/admin-action", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "limits", userId: u.id, data: { dailyLimit: parseInt(dailyLimit) } }) });
                           const d = await res.json();
                           toast.success(d.message || "Limits updated");
                         }}>
                           <Settings className="w-3 h-3 mr-1" /> Limits
                         </Button>
                         <Button size="sm" variant="destructive" className="text-xs" onClick={async () => {
-                          const res = await fetch("/api/admin-action", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "ban", userId: u.user_id }) });
+                          const res = await fetch("/api/admin-action", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "ban", userId: u.id }) });
                           const d = await res.json();
                           toast.success(d.message || "Account frozen");
                         }}>
@@ -606,17 +577,20 @@ function UsersTab() {
                         </Button>
                         <Button size="sm" variant="destructive" className="text-xs" onClick={async () => {
                           if (!confirm("Are you sure you want to close this user's accounts?")) return;
-                          const res = await fetch("/api/admin-action", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "delete", userId: u.user_id }) });
+                          const res = await fetch("/api/admin-action", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "delete", userId: u.id }) });
                           const d = await res.json();
                           toast.success(d.message || "Accounts closed");
                         }}>
                           <Trash2 className="w-3 h-3 mr-1" /> Close Accounts
                         </Button>
                         <Button size="sm" variant="outline" className="text-xs" onClick={async () => {
-                          const res = await fetch("/api/admin-action", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "assign_number", userId: u.user_id }) });
+                          const res = await fetch("/api/admin-action", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "assign_number", userId: u.id }) });
                           const d = await res.json();
-                          if (d.success) toast.success(d.message);
-                          else toast.error(d.error);
+                          if (d.success) {
+                            // Update this user's account_number in state immediately
+                            setUsers(prev => prev.map(usr => usr.id === u.id ? { ...usr, account_number: d.accountNumber || usr.account_number, accounts_count: Math.max(usr.accounts_count, 1) } : usr));
+                            toast.success(d.message);
+                          } else toast.error(d.error);
                         }}>
                           <Key className="w-3 h-3 mr-1" /> Assign #
                         </Button>
@@ -634,30 +608,77 @@ function UsersTab() {
                       <p className="text-sm font-medium">Deposit Funds</p>
                       <div className="grid grid-cols-2 gap-2">
                         <Input placeholder="Amount" type="number" value={depositAmount} onChange={e => setDepositAmount(e.target.value)} className="bg-background border-border text-sm" />
-                        <Input placeholder="Account number" value={depositAccount} onChange={e => setDepositAccount(e.target.value)} className="bg-background border-border text-sm" />
+                        <Input placeholder="Description (e.g. Salary)" value={depositDescription} onChange={e => setDepositDescription(e.target.value)} className="bg-background border-border text-sm" />
                       </div>
                       <div className="flex items-center gap-2">
-                        <input type="checkbox" id="backdate" className="accent-blue-500" />
+                        <input type="checkbox" id="backdate" className="accent-blue-500" checked={depositBackdate} onChange={e => setDepositBackdate(e.target.checked)} />
                         <label htmlFor="backdate" className="text-xs text-muted-foreground">Back-date transaction</label>
                       </div>
+                      {depositBackdate && (
+                        <Input type="date" value={depositDate} onChange={e => setDepositDate(e.target.value)} className="bg-background border-border text-sm" />
+                      )}
                       <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white w-full" onClick={async () => {
   const amount = parseFloat(depositAmount);
   if (!amount || amount <= 0) { toast.error("Enter a valid amount"); return; }
   const res = await fetch("/api/admin-deposit", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ userId: u.user_id, amount, description: "Admin deposit" }),
+    body: JSON.stringify({ userId: u.id, amount, description: depositDescription || "Deposit", ...(depositBackdate ? { backdated_at: depositDate } : {}) }),
   });
   const data = await res.json();
   if (data.success) {
     toast.success(`$${amount.toFixed(2)} deposited. New balance: $${data.newBalance.toFixed(2)}`);
+    // Update this user's balance in state immediately
+    setUsers(prev => prev.map(usr => usr.id === u.id ? { ...usr, total_balance: usr.total_balance + amount, accounts_count: Math.max(usr.accounts_count, 1) } : usr));
     setShowDeposit(false);
     setDepositAmount("");
+    setDepositBackdate(false);
+    setDepositDate(new Date().toISOString().split('T')[0]);
   } else {
     toast.error(data.error || "Deposit failed");
   }
 }}>
   Process Deposit
+</Button>
+                    </div>
+                  )}
+
+                  {showWithdraw && withdrawUserId === u.id && (
+                    <div className="p-3 bg-muted rounded-lg space-y-2">
+                      <p className="text-sm font-medium text-orange-500">Withdraw Funds</p>
+                      <div className="grid grid-cols-2 gap-2">
+                        <Input placeholder="Amount" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} className="bg-background border-border text-sm" />
+                        <Input placeholder="Reason (optional)" value={withdrawReason} onChange={e => setWithdrawReason(e.target.value)} className="bg-background border-border text-sm" />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input type="checkbox" id="withdraw-backdate" className="accent-blue-500" checked={withdrawBackdate} onChange={e => setWithdrawBackdate(e.target.checked)} />
+                        <label htmlFor="withdraw-backdate" className="text-xs text-muted-foreground">Back-date transaction</label>
+                      </div>
+                      {withdrawBackdate && (
+                        <Input type="date" value={withdrawDate} onChange={e => setWithdrawDate(e.target.value)} className="bg-background border-border text-sm" />
+                      )}
+                      <Button size="sm" className="bg-orange-600 hover:bg-orange-700 text-white w-full" onClick={async () => {
+  const amount = parseFloat(withdrawAmount);
+  if (!amount || amount <= 0) { toast.error("Enter a valid amount"); return; }
+  const res = await fetch("/api/admin-action", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action: "withdraw", userId: u.id, data: { amount, description: withdrawReason || "Withdrawal", ...(withdrawBackdate ? { backdated_at: withdrawDate } : {}) } }),
+  });
+  const data = await res.json();
+  if (data.success) {
+    setUsers(prev => prev.map(usr => usr.id === u.id ? { ...usr, total_balance: usr.total_balance - amount } : usr));
+    toast.success(data.message);
+    setShowWithdraw(false);
+    setWithdrawAmount("");
+    setWithdrawReason("");
+    setWithdrawBackdate(false);
+    setWithdrawDate(new Date().toISOString().split('T')[0]);
+  } else {
+    toast.error(data.error || "Withdrawal failed");
+  }
+}}>
+  Process Withdrawal
 </Button>
                     </div>
                   )}
@@ -681,53 +702,16 @@ function TransactionsTab() {
 
   const fetchTxns = useCallback(async () => {
     setLoading(true);
-    const supabase = createClient();
     try {
-      const { data: txData } = await supabase
-        .from("transactions")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(50);
-
-      if (!txData) {
-        setTxs([]);
-        return;
-      }
-
-      // Fetch related bank accounts for from/to display
-      const accountIds = new Set<string>();
-      txData.forEach((t: Transaction) => {
-        if (t.from_account_id) accountIds.add(t.from_account_id);
-        if (t.to_account_id) accountIds.add(t.to_account_id);
-      });
-
-      let accountMap: Record<string, BankAccount> = {};
-      if (accountIds.size > 0) {
-        const { data: accounts } = await supabase
-          .from("bank_accounts")
-          .select("*")
-          .in("id", Array.from(accountIds));
-
-        if (accounts) {
-          accounts.forEach((a: BankAccount) => {
-            accountMap[a.id] = a;
-          });
-        }
-      }
-
-      const enriched: TransactionWithAccounts[] = txData.map((t: Transaction) => ({
-        ...t,
-        from_account: t.from_account_id ? accountMap[t.from_account_id] || null : null,
-        to_account: t.to_account_id ? accountMap[t.to_account_id] || null : null,
-      }));
-
-      setTxs(enriched);
+      const res = await fetch(`/api/admin-data?type=transactions&filter=${filter}`);
+      const data = await res.json();
+      setTxs(data.items || []);
     } catch (err) {
       console.error("Failed to fetch transactions:", err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [filter]);
 
   useEffect(() => {
     fetchTxns();
@@ -814,41 +798,10 @@ function DepositsTab() {
 
   const fetchDeposits = useCallback(async () => {
     setLoading(true);
-    const supabase = createClient();
     try {
-      const { data } = await supabase
-        .from("transactions")
-        .select("*")
-        .eq("type", "deposit")
-        .eq("status", "pending")
-        .order("created_at", { ascending: false });
-
-      if (!data) { setDeposits([]); return; }
-
-      const accountIds = new Set<string>();
-      data.forEach((t: Transaction) => {
-        if (t.to_account_id) accountIds.add(t.to_account_id);
-        if (t.from_account_id) accountIds.add(t.from_account_id);
-      });
-
-      let accountMap: Record<string, BankAccount> = {};
-      if (accountIds.size > 0) {
-        const { data: accounts } = await supabase
-          .from("bank_accounts")
-          .select("*")
-          .in("id", Array.from(accountIds));
-        if (accounts) {
-          accounts.forEach((a: BankAccount) => { accountMap[a.id] = a; });
-        }
-      }
-
-      const enriched: TransactionWithAccounts[] = data.map((t: Transaction) => ({
-        ...t,
-        from_account: t.from_account_id ? accountMap[t.from_account_id] || null : null,
-        to_account: t.to_account_id ? accountMap[t.to_account_id] || null : null,
-      }));
-
-      setDeposits(enriched);
+      const res = await fetch("/api/admin-data?type=deposits");
+      const data = await res.json();
+      setDeposits(data.items || []);
     } catch (err) {
       console.error("Failed to fetch deposits:", err);
     } finally {
@@ -911,41 +864,10 @@ function WithdrawalsTab() {
 
   const fetchWithdrawals = useCallback(async () => {
     setLoading(true);
-    const supabase = createClient();
     try {
-      const { data } = await supabase
-        .from("transactions")
-        .select("*")
-        .eq("type", "withdrawal")
-        .eq("status", "pending")
-        .order("created_at", { ascending: false });
-
-      if (!data) { setWithdrawals([]); return; }
-
-      const accountIds = new Set<string>();
-      data.forEach((t: Transaction) => {
-        if (t.from_account_id) accountIds.add(t.from_account_id);
-        if (t.to_account_id) accountIds.add(t.to_account_id);
-      });
-
-      let accountMap: Record<string, BankAccount> = {};
-      if (accountIds.size > 0) {
-        const { data: accounts } = await supabase
-          .from("bank_accounts")
-          .select("*")
-          .in("id", Array.from(accountIds));
-        if (accounts) {
-          accounts.forEach((a: BankAccount) => { accountMap[a.id] = a; });
-        }
-      }
-
-      const enriched: TransactionWithAccounts[] = data.map((t: Transaction) => ({
-        ...t,
-        from_account: t.from_account_id ? accountMap[t.from_account_id] || null : null,
-        to_account: t.to_account_id ? accountMap[t.to_account_id] || null : null,
-      }));
-
-      setWithdrawals(enriched);
+      const res = await fetch("/api/admin-data?type=withdrawals");
+      const data = await res.json();
+      setWithdrawals(data.items || []);
     } catch (err) {
       console.error("Failed to fetch withdrawals:", err);
     } finally {
@@ -1002,14 +924,10 @@ function LoansTab() {
 
   const fetchLoans = useCallback(async () => {
     setLoading(true);
-    const supabase = createClient();
     try {
-      const { data } = await supabase
-        .from("loans")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      setLoans(data || []);
+      const res = await fetch("/api/admin-data?type=loans");
+      const data = await res.json();
+      setLoans(data.items || []);
     } catch (err) {
       console.error("Failed to fetch loans:", err);
     } finally {
@@ -1081,93 +999,10 @@ function POVTab() {
 
   const fetchPovItems = useCallback(async () => {
     setLoading(true);
-    const supabase = createClient();
     try {
-      // Get transactions needing POV verification
-      const { data: txData } = await supabase
-        .from("transactions")
-        .select("id, transaction_ref, type, amount, from_account_id, to_account_id, created_at")
-        .eq("pov_required", true)
-        .eq("pov_verified", false)
-        .not("status", "eq", "completed")
-        .order("created_at", { ascending: false });
-
-      if (!txData || txData.length === 0) {
-        setPovItems([]);
-        return;
-      }
-
-      // Get account IDs to figure out user profiles
-      const accountIds = new Set<string>();
-      txData.forEach((t: any) => {
-        if (t.from_account_id) accountIds.add(t.from_account_id);
-        if (t.to_account_id) accountIds.add(t.to_account_id);
-      });
-
-      let profileMap: Record<string, string> = {};
-      if (accountIds.size > 0) {
-        const { data: accounts } = await supabase
-          .from("bank_accounts")
-          .select("id, user_id")
-          .in("id", Array.from(accountIds));
-
-        if (accounts) {
-          const profileIds = [...new Set(accounts.map((a: any) => a.user_id))];
-          const { data: profiles } = await supabase
-            .from("profiles")
-            .select("id, full_name")
-            .in("id", profileIds);
-
-          if (profiles) {
-            profiles.forEach((p: any) => {
-              profileMap[p.id] = p.full_name || "Unknown";
-            });
-          }
-        }
-      }
-
-      // Get POV code info for each transaction
-      const txIdToPov: Record<string, { attempts: number; max_attempts: number }> = {};
-      const { data: povCodes } = await supabase
-        .from("pov_codes")
-        .select("transaction_id, attempts, max_attempts")
-        .in("transaction_id", txData.map((t: any) => t.id));
-
-      if (povCodes) {
-        povCodes.forEach((pc: any) => {
-          txIdToPov[pc.transaction_id] = { attempts: pc.attempts, max_attempts: pc.max_attempts };
-        });
-      }
-
-      // Build items - get user name from first matching account
-      const accountUserMap: Record<string, string> = {};
-      if (accountIds.size > 0) {
-        const { data: accounts } = await supabase
-          .from("bank_accounts")
-          .select("id, user_id")
-          .in("id", Array.from(accountIds));
-        if (accounts) {
-          accounts.forEach((a: any) => {
-            accountUserMap[a.id] = a.user_id;
-          });
-        }
-      }
-
-      const items: PoVItem[] = txData.map((t: any) => {
-        const goodAccountId = t.from_account_id || t.to_account_id || "";
-        const profileId = goodAccountId ? accountUserMap[goodAccountId] || "" : "";
-        const povInfo = txIdToPov[t.id] || { attempts: 0, max_attempts: 3 };
-        return {
-          transaction_ref: t.transaction_ref,
-          user_name: profileId ? profileMap[profileId] || "Unknown" : "Unknown",
-          amount: Number(t.amount),
-          created_at: t.created_at || "",
-          attempts: povInfo.attempts,
-          max_attempts: povInfo.max_attempts,
-        };
-      });
-
-      setPovItems(items);
+      const res = await fetch("/api/admin-data?type=pov");
+      const data = await res.json();
+      setPovItems(data.items || []);
     } catch (err) {
       console.error("Failed to fetch POV items:", err);
     } finally {
@@ -1202,10 +1037,39 @@ function POVTab() {
                 <p className="text-xs text-muted-foreground">{p.created_at ? new Date(p.created_at).toLocaleString() : "N/A"} · {p.attempts}/{p.max_attempts} attempts</p>
               </div>
               <div className="flex gap-2">
-                <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white text-xs" onClick={() => toast.success("POV code: 482916 (share with user)")}>
+                <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white text-xs" onClick={async () => {
+                  const res = await fetch("/api/admin-pov", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ transactionId: p.id }),
+                  });
+                  const data = await res.json();
+                  if (data.success && data.code) {
+                    toast.success(`POV code: ${data.code} (copied to clipboard)`);
+                    try {
+                      await navigator.clipboard.writeText(data.code);
+                    } catch {}
+                  } else {
+                    toast.error(data.error || "Failed to generate code");
+                  }
+                }}>
                   <Shield className="w-3 h-3 mr-1" /> Generate Code
                 </Button>
-                <Button size="sm" variant="outline" className="text-xs" onClick={() => toast.success("POV bypassed")}>
+                <Button size="sm" variant="outline" className="text-xs" onClick={async () => {
+                  const res = await fetch("/api/admin-action", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ action: "bypass_pov", data: { transactionId: p.id } }),
+                  });
+                  const d = await res.json();
+                  if (d.success) {
+                    toast.success("POV bypassed");
+                    // Remove from list
+                    setPovItems(prev => prev.filter(item => item.id !== p.id));
+                  } else {
+                    toast.error(d.error || "Bypass failed");
+                  }
+                }}>
                   <RefreshCw className="w-3 h-3 mr-1" /> Bypass
                 </Button>
               </div>
@@ -1225,14 +1089,10 @@ function SupportTab() {
 
   const fetchTickets = useCallback(async () => {
     setLoading(true);
-    const supabase = createClient();
     try {
-      const { data } = await supabase
-        .from("support_tickets")
-        .select("*")
-        .order("created_at", { ascending: false });
-
-      setTickets(data || []);
+      const res = await fetch("/api/admin-data?type=support");
+      const data = await res.json();
+      setTickets(data.items || []);
     } catch (err) {
       console.error("Failed to fetch support tickets:", err);
     } finally {
@@ -1298,19 +1158,10 @@ function SettingsTab() {
 
   const fetchSettings = useCallback(async () => {
     setLoading(true);
-    const supabase = createClient();
     try {
-      const { data } = await supabase
-        .from("app_settings")
-        .select("key, value");
-
-      if (data) {
-        const map: Record<string, any> = {};
-        data.forEach((s: { key: string; value: any }) => {
-          map[s.key] = s.value;
-        });
-        setSettings(map);
-      }
+      const res = await fetch("/api/admin-data?type=settings");
+      const data = await res.json();
+      setSettings(data.settings || {});
     } catch (err) {
       console.error("Failed to fetch settings:", err);
     } finally {

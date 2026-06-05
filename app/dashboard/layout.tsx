@@ -52,10 +52,18 @@ export default function DashboardLayout({
 
         // Fetch user's accounts from Supabase
         const supabase = createClient();
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("id")
+          .eq("user_id", user?.id)
+          .single();
+
+        if (!profile) { setWelcomeChecked(true); return; }
+
         const { data: accounts, error } = await supabase
           .from("bank_accounts")
           .select("*")
-          .eq("user_id", user?.id)
+          .eq("user_id", profile.id)
           .limit(1);
 
         if (error) {
