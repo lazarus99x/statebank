@@ -24,9 +24,8 @@ import { APP_NAME } from "@/lib/constants";
 const navItems = [
   { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
   { label: "My Accounts", href: "/dashboard/accounts", icon: Building2 },
-  { label: "Transfer", href: "/dashboard/transfer", icon: ArrowUpDown },
   { label: "Deposit", href: "/dashboard/deposit", icon: Plus },
-  { label: "Withdraw", href: "/dashboard/withdraw", icon: Minus },
+  { label: "Transfer", href: "/dashboard/transfer", icon: ArrowUpDown },
   { label: "Bill Pay", href: "/dashboard/bill-pay", icon: Receipt },
   { label: "Loans", href: "/dashboard/loans", icon: Landmark },
   { label: "Beneficiaries", href: "/dashboard/beneficiaries", icon: Users },
