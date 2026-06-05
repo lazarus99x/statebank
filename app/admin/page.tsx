@@ -470,7 +470,7 @@ function UsersTab() {
   const [showWithdraw, setShowWithdraw] = useState(false);
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [withdrawReason, setWithdrawReason] = useState("");
-  const [users, setUsers] = useState<(Profile & { accounts_count: number; total_balance: number })[]>([]);
+  const [users, setUsers] = useState<(Profile & { accounts_count: number; total_balance: number; account_number: string | null })[]>([]);
   const [loading, setLoading] = useState(true);
   const [depositUserId, setDepositUserId] = useState<string | null>(null);
   const [withdrawUserId, setWithdrawUserId] = useState<string | null>(null);

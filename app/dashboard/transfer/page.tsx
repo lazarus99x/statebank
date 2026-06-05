@@ -99,8 +99,8 @@ const itemVariants = {
 
 const checkmarkVariants = {
   hidden: { pathLength: 0, opacity: 0 },
-  visible: { pathLength: 1, opacity: 1, transition: { duration: 0.6, ease: "easeInOut" } },
-};
+  visible: { pathLength: 1, opacity: 1, transition: { duration: 0.6, ease: "easeInOut" as const } },
+} as const;
 
 /* ── Currency formatter ─────────────────────────────────────── */
 const fmt = (n: number) =>
