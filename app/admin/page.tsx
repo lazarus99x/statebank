@@ -176,19 +176,19 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground">Admin Panel</h1>
-          <p className="text-sm text-muted-foreground mt-1">Full control over StateBank operations</p>
+    <div className="space-y-4 sm:space-y-6 p-3 sm:p-6 max-w-full overflow-x-hidden">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-3xl font-bold text-foreground">Admin Panel</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">Full control over StateBank operations</p>
         </div>
         <button onClick={() => { createClient().auth.signOut().then(() => { setAuthState("login"); }); }}
-          className="flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-2 text-xs text-white/50 hover:bg-white/5 hover:text-white/80 transition-colors">
+          className="flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-2 text-xs text-white/50 hover:bg-white/5 hover:text-white/80 transition-colors shrink-0">
           Sign Out
         </button>
       </div>
 
-<div className="flex gap-4">
+<div className="flex flex-col md:flex-row gap-4">
         {/* Sidebar Navigation - hidden on mobile, visible on md+ */}
         <div className="hidden md:block w-56 shrink-0">
           <div className="sticky top-4 space-y-1 rounded-xl border border-border bg-card/50 p-2 backdrop-blur">
@@ -547,12 +547,12 @@ function UsersTab() {
 
               {expanded === u.id && (
                 <div className="px-4 pb-4 border-t border-border pt-3 space-y-4">
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-sm">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
                     <div><span className="text-muted-foreground text-xs">Phone:</span><p className="text-foreground font-medium">{u.phone || "N/A"}</p></div>
                     <div><span className="text-muted-foreground text-xs">Account #:</span><p className="text-foreground font-medium font-mono">{u.account_number || <span className="text-yellow-500">Not assigned</span>}</p></div>
                     <div><span className="text-muted-foreground text-xs">Balance:</span><p className="text-foreground font-medium">${u.total_balance.toLocaleString()}</p></div>
                   </div>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="flex flex-wrap gap-1.5">
                     <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white text-xs" onClick={() => { setShowDeposit(true); setDepositUserId(u.id); toast.info("Deposit form opened"); }}>
                       <Download className="w-3 h-3 mr-1" /> Deposit
                     </Button>
@@ -606,7 +606,7 @@ function UsersTab() {
                   {showDeposit && depositUserId === u.id && (
                     <div className="p-3 bg-muted rounded-lg space-y-2">
                       <p className="text-sm font-medium">Deposit Funds</p>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         <Input placeholder="Amount" type="number" value={depositAmount} onChange={e => setDepositAmount(e.target.value)} className="bg-background border-border text-sm" />
                         <Input placeholder="Description (e.g. Salary)" value={depositDescription} onChange={e => setDepositDescription(e.target.value)} className="bg-background border-border text-sm" />
                       </div>
@@ -646,7 +646,7 @@ function UsersTab() {
                   {showWithdraw && withdrawUserId === u.id && (
                     <div className="p-3 bg-muted rounded-lg space-y-2">
                       <p className="text-sm font-medium text-orange-500">Withdraw Funds</p>
-                      <div className="grid grid-cols-2 gap-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                         <Input placeholder="Amount" type="number" value={withdrawAmount} onChange={e => setWithdrawAmount(e.target.value)} className="bg-background border-border text-sm" />
                         <Input placeholder="Reason (optional)" value={withdrawReason} onChange={e => setWithdrawReason(e.target.value)} className="bg-background border-border text-sm" />
                       </div>
@@ -767,7 +767,7 @@ function TransactionsTab() {
 
                 {expanded === tx.id && (
                   <div className="px-4 pb-4 border-t border-border pt-3 space-y-3">
-                    <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                       <div><span className="text-muted-foreground text-xs">From:</span><p className="text-foreground">{fromDisplay}</p></div>
                       <div><span className="text-muted-foreground text-xs">To:</span><p className="text-foreground">{toDisplay}</p></div>
                       <div><span className="text-muted-foreground text-xs">Date:</span><p className="text-foreground">{tx.created_at ? new Date(tx.created_at).toLocaleDateString() : "N/A"}</p></div>
@@ -972,13 +972,13 @@ function LoansTab() {
           </div>
           {expanded === l.id && (
             <div className="px-4 pb-4 border-t pt-3 space-y-3">
-              <div className="grid grid-cols-2 gap-3 text-sm">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                 <div><span className="text-muted-foreground text-xs">Monthly:</span><p className="text-foreground">${Number(l.monthly_payment).toLocaleString()}/mo</p></div>
                 <div><span className="text-muted-foreground text-xs">Remaining:</span><p className="text-foreground">${Number(l.remaining_balance).toLocaleString()}</p></div>
                 <div><span className="text-muted-foreground text-xs">Tenure:</span><p className="text-foreground">{l.tenure_months} months</p></div>
                 <div><span className="text-muted-foreground text-xs">Rate:</span><p className="text-foreground">{(Number(l.interest_rate) * 100).toFixed(2)}%</p></div>
               </div>
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
                 <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white text-xs"><CheckCircle className="w-3 h-3 mr-1" /> Approve</Button>
                 <Button size="sm" variant="destructive" className="text-xs"><XCircle className="w-3 h-3 mr-1" /> Reject</Button>
                 <Button size="sm" variant="outline" className="text-xs text-red-500"><Ban className="w-3 h-3 mr-1" /> Mark Defaulted</Button>
@@ -1036,7 +1036,7 @@ function POVTab() {
                 <p className="text-xs text-muted-foreground">{p.transaction_ref} · ${p.amount.toLocaleString()}</p>
                 <p className="text-xs text-muted-foreground">{p.created_at ? new Date(p.created_at).toLocaleString() : "N/A"} · {p.attempts}/{p.max_attempts} attempts</p>
               </div>
-              <div className="flex gap-2">
+              <div className="flex gap-2 shrink-0">
                 <Button size="sm" className="bg-blue-600 hover:bg-blue-700 text-white text-xs" onClick={async () => {
                   const res = await fetch("/api/admin-pov", {
                     method: "POST",
@@ -1134,7 +1134,7 @@ function SupportTab() {
               <p className="text-xs text-muted-foreground">Ticket · {t.id.slice(0, 8)}</p>
               <p className="text-xs text-muted-foreground">{t.created_at ? new Date(t.created_at).toLocaleString() : "N/A"}</p>
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 shrink-0">
               <span className={`px-2 py-0.5 rounded text-xs font-medium ${
                 t.status === "open" ? "bg-yellow-500/10 text-yellow-500" :
                 t.status === "in_progress" ? "bg-blue-500/10 text-blue-500" :
