@@ -4,7 +4,7 @@ import { Toaster } from "sonner";
 import dynamic from "next/dynamic";
 import "./globals.css";
 
-const SmartsuppChat = dynamic(() => import("@/components/SmartsuppChat"), { ssr: false });
+const SmartsuppChat = dynamic(() => import("@/components/SmartsuppChat"));
 
 /* ── Fonts ────────────────────────────────────────────────── */
 const inter = Inter({
