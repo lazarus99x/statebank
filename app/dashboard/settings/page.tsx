@@ -137,7 +137,7 @@ export default function SettingsPage() {
     fetchProfile();
   };
 
-  const handleChangePassword = (e: React.FormEvent) => {
+  const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
       toast.error("Passwords do not match");
@@ -148,13 +148,17 @@ export default function SettingsPage() {
       return;
     }
     setIsSaving(true);
-    setTimeout(() => {
-      setIsSaving(false);
+    const supabase = createClient();
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    setIsSaving(false);
+    if (error) {
+      toast.error("Failed to update password: " + error.message);
+    } else {
       toast.success("Password changed successfully!");
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-    }, 1000);
+    }
   };
 
   const initials = fullName

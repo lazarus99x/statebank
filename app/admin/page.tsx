@@ -1210,6 +1210,50 @@ function SettingsTab() {
           <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => toast.success("Settings saved")}>Save Settings</Button>
         </div>
       </Card>
+
+      {/* ── Admin Change Password ── */}
+      <Card className="border border-white/10 bg-white/5 p-6 mb-6">
+        <div className="flex items-center gap-2 mb-4">
+          <Lock className="h-5 w-5 text-amber-400" />
+          <h3 className="text-lg font-semibold text-white">Change Admin Password</h3>
+        </div>
+        <p className="text-sm text-white/60 mb-4">Update your admin account password.</p>
+        <form onSubmit={async (e) => {
+          e.preventDefault();
+          const form = e.target as HTMLFormElement;
+          const current = (form.elements.namedItem("admin-current") as HTMLInputElement).value;
+          const newPw = (form.elements.namedItem("admin-new") as HTMLInputElement).value;
+          const confirm = (form.elements.namedItem("admin-confirm") as HTMLInputElement).value;
+          if (newPw !== confirm) return toast.error("Passwords do not match");
+          if (newPw.length < 8) return toast.error("Password must be at least 8 characters");
+          const supabase = createClient();
+          const { error: signInErr } = await supabase.auth.signInWithPassword({
+            email: (await supabase.auth.getUser()).data.user?.email ?? "",
+            password: current,
+          });
+          if (signInErr) return toast.error("Current password is incorrect");
+          const { error: updateErr } = await supabase.auth.updateUser({ password: newPw });
+          if (updateErr) return toast.error("Failed: " + updateErr.message);
+          toast.success("Password changed successfully!");
+          form.reset();
+        }}>
+          <div className="grid gap-4 sm:grid-cols-3 mb-4">
+            <div>
+              <label className="block text-sm text-white/60 mb-1">Current Password</label>
+              <Input name="admin-current" type="password" required className="bg-white/5 border-white/10 text-white" />
+            </div>
+            <div>
+              <label className="block text-sm text-white/60 mb-1">New Password</label>
+              <Input name="admin-new" type="password" required className="bg-white/5 border-white/10 text-white" />
+            </div>
+            <div>
+              <label className="block text-sm text-white/60 mb-1">Confirm New</label>
+              <Input name="admin-confirm" type="password" required className="bg-white/5 border-white/10 text-white" />
+            </div>
+          </div>
+          <Button type="submit" className="bg-amber-500 hover:bg-amber-600 text-black font-semibold">Update Password</Button>
+        </form>
+      </Card>
     </div>
   );
 }

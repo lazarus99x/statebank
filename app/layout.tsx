@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import { Inter, Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/google";
 import { Toaster } from "sonner";
+import dynamic from "next/dynamic";
 import "./globals.css";
+
+const SmartsuppChat = dynamic(() => import("@/components/SmartsuppChat"), { ssr: false });
 
 /* ── Fonts ────────────────────────────────────────────────── */
 const inter = Inter({
@@ -73,6 +76,7 @@ export default function RootLayout({
     >
       <body className="min-h-screen bg-bg-base text-text-primary font-sans antialiased">
         {children}
+        <SmartsuppChat />
         <Toaster
           position="top-right"
           richColors
