@@ -18,6 +18,8 @@ import {
   CheckCircle2,
   Star,
   Quote,
+  MapPin,
+  Mail,
 } from "lucide-react";
 
 /* ── Free Unsplash Images (CC0, no watermark) ──────────────── */
@@ -179,7 +181,7 @@ export default function LandingPage() {
             </span>
           </Link>
 
-          <nav className="hidden items-center gap-8 md:flex">
+          <nav className="hidden items-center gap-6 md:flex">
             {["Features", "Stats", "Testimonials"].map((item) => (
               <Link
                 key={item}
@@ -189,6 +191,15 @@ export default function LandingPage() {
                 {item}
               </Link>
             ))}
+            <span className="h-4 w-px bg-border-muted" />
+            <span className="flex items-center gap-1.5 text-xs text-text-muted">
+              <Phone className="h-3.5 w-3.5 text-primary" />
+              +1 (909) 703-3627
+            </span>
+            <span className="flex items-center gap-1.5 text-xs text-text-muted">
+              <Building2 className="h-3.5 w-3.5 text-primary" />
+              Washington DC, USA
+            </span>
           </nav>
 
           <div className="flex items-center gap-3">
@@ -671,39 +682,51 @@ export default function LandingPage() {
               </ul>
             </div>
 
-            {/* Support */}
+            {/* Contact */}
             <div>
               <h4 className="mb-4 font-display text-sm font-semibold uppercase tracking-wider text-text-primary">
-                Support
+                Contact
               </h4>
               <ul className="space-y-3">
-                {[
-                  "Help Center",
-                  "Contact Us",
-                  "FAQs",
-                  "Community",
-                  "Status",
-                  "Accessibility",
-                ].map((item) => (
-                  <li key={item}>
-                    <Link
-                      href="#"
-                      className="text-sm text-text-muted transition-colors hover:text-text-secondary"
-                    >
-                      {item}
-                    </Link>
-                  </li>
-                ))}
+                <li className="flex items-start gap-2">
+                  <MapPin className="mt-0.5 h-4 w-4 text-primary shrink-0" />
+                  <span className="text-sm text-text-muted">
+                    Washington DC, USA
+                  </span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <Phone className="mt-0.5 h-4 w-4 text-primary shrink-0" />
+                  <a
+                    href="tel:+19097033627"
+                    className="text-sm text-text-muted transition-colors hover:text-text-secondary"
+                  >
+                    +1 (909) 703-3627
+                  </a>
+                </li>
+                <li className="flex items-start gap-2">
+                  <Mail className="mt-0.5 h-4 w-4 text-primary shrink-0" />
+                  <a
+                    href="mailto:support@statebank.com"
+                    className="text-sm text-text-muted transition-colors hover:text-text-secondary"
+                  >
+                    support@statebank.com
+                  </a>
+                </li>
               </ul>
             </div>
           </div>
 
           <div className="mt-12 border-t border-border-default pt-8">
             <div className="flex flex-col items-center justify-between gap-4 sm:flex-row">
-              <p className="text-xs text-text-muted">
-                &copy; {new Date().getFullYear()} StateBank. All rights
-                reserved. Member FDIC. Equal Housing Lender.
-              </p>
+              <div className="flex flex-col items-center gap-1 sm:items-start">
+                <p className="text-xs text-text-muted">
+                  &copy; {new Date().getFullYear()} StateBank. All rights
+                  reserved. Member FDIC. Equal Housing Lender.
+                </p>
+                <p className="text-xs text-text-muted">
+                  Washington DC, USA &nbsp;&bull;&nbsp; +1 (909) 703-3627
+                </p>
+              </div>
               <div className="flex gap-4 text-xs text-text-muted">
                 <Link
                   href="#"
