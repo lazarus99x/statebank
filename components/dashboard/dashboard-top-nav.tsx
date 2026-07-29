@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
@@ -15,6 +15,7 @@ import {
   Settings,
   HelpCircle,
   Shield,
+  Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUser, useClerk } from "@/lib/auth";
@@ -45,6 +46,20 @@ export default function DashboardTopNav({ onMenuClick }: DashboardTopNavProps) {
   const clerk = useClerk();
   const [showDropdown, setShowDropdown] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [notifications, setNotifications] = useState<{ id: string; title: string; desc: string; time: string; unread: boolean }[]>([]);
+  const [notifLoading, setNotifLoading] = useState(false);
+
+  useEffect(() => {
+    if (!showNotifications || notifLoading) return;
+    setNotifLoading(true);
+    fetch("/api/notifications")
+      .then(r => r.json())
+      .then(data => {
+        setNotifications(data.notifications || []);
+      })
+      .catch(() => {})
+      .finally(() => setNotifLoading(false));
+  }, [showNotifications]);
 
   const currentLabel =
     breadcrumbMap[pathname] || pathname.split("/").pop()?.replace(/-/g, " ") || "Overview";
@@ -107,7 +122,7 @@ export default function DashboardTopNav({ onMenuClick }: DashboardTopNavProps) {
           >
             <Bell className="h-4.5 w-4.5" />
             <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-white">
-              3
+              {notifications.filter(n => n.unread).length || 0}
             </span>
           </button>
 
@@ -129,51 +144,40 @@ export default function DashboardTopNav({ onMenuClick }: DashboardTopNavProps) {
                   <p className="text-sm font-semibold text-text-primary">Notifications</p>
                 </div>
                 <div className="max-h-72 overflow-y-auto">
-                  {[
-                    {
-                      title: "Transfer Received",
-                      desc: "$2,500.00 from John Doe",
-                      time: "2 min ago",
-                      unread: true,
-                    },
-                    {
-                      title: "Bill Payment Due",
-                      desc: "Electric bill due in 3 days",
-                      time: "1 hour ago",
-                      unread: true,
-                    },
-                    {
-                      title: "Account Updated",
-                      desc: "Your savings account was updated",
-                      time: "1 day ago",
-                      unread: false,
-                    },
-                  ].map((notif, i) => (
-                    <button
-                      key={i}
-                      className="w-full text-left px-4 py-3 transition-colors hover:bg-accent border-b border-border/50 last:border-0"
-                    >
-                      <div className="flex items-start gap-2.5">
-                        <div
-                          className={cn(
-                            "mt-1 h-2 w-2 shrink-0 rounded-full",
-                            notif.unread ? "bg-primary" : "bg-transparent"
-                          )}
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-text-primary">
-                            {notif.title}
-                          </p>
-                          <p className="text-xs text-text-muted mt-0.5">
-                            {notif.desc}
-                          </p>
-                          <p className="text-[11px] text-text-muted/60 mt-1">
-                            {notif.time}
-                          </p>
+                  {notifLoading ? (
+                    <div className="flex items-center justify-center py-8">
+                      <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                    </div>
+                  ) : notifications.length === 0 ? (
+                    <div className="px-4 py-8 text-center text-xs text-muted-foreground">No notifications yet</div>
+                  ) : (
+                    notifications.map((notif) => (
+                      <button
+                        key={notif.id}
+                        className="w-full text-left px-4 py-3 transition-colors hover:bg-accent border-b border-border/50 last:border-0"
+                      >
+                        <div className="flex items-start gap-2.5">
+                          <div
+                            className={cn(
+                              "mt-1 h-2 w-2 shrink-0 rounded-full",
+                              notif.unread ? "bg-primary" : "bg-transparent"
+                            )}
+                          />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-text-primary">
+                              {notif.title}
+                            </p>
+                            <p className="text-xs text-text-muted mt-0.5">
+                              {notif.desc}
+                            </p>
+                            <p className="text-[11px] text-text-muted/60 mt-1">
+                              {notif.time}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    </button>
-                  ))}
+                      </button>
+                    ))
+                  )}
                 </div>
                 <div className="p-2 border-t border-border">
                   <button className="w-full rounded-lg py-2 text-center text-xs font-medium text-primary transition-colors hover:bg-accent">

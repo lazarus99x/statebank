@@ -120,6 +120,78 @@ export async function POST(request: Request) {
         return NextResponse.json({ success: true, message: "POV verification bypassed" });
       }
 
+      case "approve_txn": {
+        if (!data?.transactionId) return NextResponse.json({ success: false, error: "Missing transactionId" });
+        await adminClient.from("transactions").update({ status: "completed", completed_at: new Date().toISOString() }).eq("id", data.transactionId);
+        return NextResponse.json({ success: true, message: "Transaction approved" });
+      }
+
+      case "reject_txn": {
+        if (!data?.transactionId) return NextResponse.json({ success: false, error: "Missing transactionId" });
+        await adminClient.from("transactions").update({ status: "cancelled" }).eq("id", data.transactionId);
+        return NextResponse.json({ success: true, message: "Transaction rejected" });
+      }
+
+      case "reverse_txn": {
+        if (!data?.transactionId) return NextResponse.json({ success: false, error: "Missing transactionId" });
+        const { data: txn } = await adminClient.from("transactions").select("*").eq("id", data.transactionId).single();
+        if (!txn) return NextResponse.json({ success: false, error: "Transaction not found" });
+        // Reverse: refund the amount to the source account
+        for (const acctId of [txn.from_account_id, txn.to_account_id].filter(Boolean)) {
+          const amount = acctId === txn.from_account_id ? txn.amount : -txn.amount;
+          const { data: acct } = await adminClient.from("bank_accounts").select("balance").eq("id", acctId).single();
+          if (acct) {
+            await adminClient.from("bank_accounts").update({ balance: Number(acct.balance) + amount }).eq("id", acctId);
+          }
+        }
+        await adminClient.from("transactions").update({ status: "reversed" }).eq("id", data.transactionId);
+        return NextResponse.json({ success: true, message: "Transaction reversed" });
+      }
+
+      case "approve_loan": {
+        if (!data?.loanId) return NextResponse.json({ success: false, error: "Missing loanId" });
+        await adminClient.from("loans").update({ status: "active" }).eq("id", data.loanId);
+        // Add loan amount to user's account
+        const { data: loan } = await adminClient.from("loans").select("*").eq("id", data.loanId).single();
+        if (loan) {
+          await adminClient.from("bank_accounts").update({ balance: Number(loan.principal) }).eq("id", loan.account_id);
+        }
+        return NextResponse.json({ success: true, message: "Loan approved" });
+      }
+
+      case "reject_loan": {
+        if (!data?.loanId) return NextResponse.json({ success: false, error: "Missing loanId" });
+        await adminClient.from("loans").update({ status: "rejected" }).eq("id", data.loanId);
+        return NextResponse.json({ success: true, message: "Loan rejected" });
+      }
+
+      case "default_loan": {
+        if (!data?.loanId) return NextResponse.json({ success: false, error: "Missing loanId" });
+        await adminClient.from("loans").update({ status: "defaulted" }).eq("id", data.loanId);
+        return NextResponse.json({ success: true, message: "Loan marked as defaulted" });
+      }
+
+      case "backdate_txn": {
+        if (!data?.transactionId || !data?.date) return NextResponse.json({ success: false, error: "Missing transactionId or date" });
+        await adminClient.from("transactions").update({ created_at: new Date(data.date).toISOString(), completed_at: new Date(data.date).toISOString() }).eq("id", data.transactionId);
+        return NextResponse.json({ success: true, message: "Transaction backdated" });
+      }
+
+      case "save_settings": {
+        if (!data?.settings) return NextResponse.json({ success: false, error: "Missing settings" });
+        // Upsert each setting key individually into app_settings table
+        const entries = Object.entries(data.settings);
+        for (const [key, value] of entries) {
+          const { data: existing } = await adminClient.from("app_settings").select("id").eq("key", key).maybeSingle();
+          if (existing) {
+            await adminClient.from("app_settings").update({ value }).eq("id", existing.id);
+          } else {
+            await adminClient.from("app_settings").insert({ key, value });
+          }
+        }
+        return NextResponse.json({ success: true, message: "Settings saved" });
+      }
+
       default:
         return NextResponse.json({ success: false, error: "Unknown action" });
     }

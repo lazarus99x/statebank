@@ -41,6 +41,24 @@
   /* ── Shadows ─────────────────────────────────────────────── */
   --shadow-glow-primary: 0 0 120px 40px rgba(0, 102, 255, 0.06);
   --shadow-glow-gold: 0 0 120px 40px rgba(245, 166, 35, 0.04);
+
+  /* ── shadcn compat layer ─────────────────────────────────── */
+  --color-background: var(--color-bg-base);
+  --color-foreground: var(--color-text-primary);
+  --color-card: var(--color-bg-card);
+  --color-card-foreground: var(--color-text-primary);
+  --color-popover: var(--color-bg-elevated);
+  --color-popover-foreground: var(--color-text-primary);
+  --color-primary-foreground: #ffffff;
+  --color-secondary: var(--color-bg-surface);
+  --color-secondary-foreground: var(--color-text-primary);
+  --color-muted: var(--color-bg-input);
+  --color-muted-foreground: var(--color-text-muted);
+  --color-accent-foreground: var(--color-text-primary);
+  --color-destructive-foreground: #ffffff;
+  --color-input: var(--color-border);
+  --color-ring: var(--color-primary);
+  --radius: 0.625rem;
 }
 
 /* ── Base Styles ───────────────────────────────────────────── */

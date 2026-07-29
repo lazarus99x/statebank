@@ -774,10 +774,28 @@ function TransactionsTab() {
                       <div><span className="text-muted-foreground text-xs">POV Required:</span><p className={tx.pov_required ? "text-red-500" : "text-green-500"}>{tx.pov_required ? "Yes" : "No"}</p></div>
                     </div>
                     <div className="flex flex-wrap gap-2 pt-2">
-                      <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white text-xs"><CheckCircle className="w-3 h-3 mr-1" /> Approve</Button>
-                      <Button size="sm" variant="destructive" className="text-xs"><XCircle className="w-3 h-3 mr-1" /> Reject</Button>
-                      <Button size="sm" variant="outline" className="text-xs"><RefreshCw className="w-3 h-3 mr-1" /> Reverse</Button>
-                      <Button size="sm" variant="outline" className="text-xs"><Clock className="w-3 h-3 mr-1" /> Back-date</Button>
+                      <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white text-xs" onClick={async () => {
+                        const res = await fetch("/api/admin-action", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "approve_txn", data: { transactionId: tx.id } }) });
+                        const d = await res.json();
+                        if (d.success) { toast.success("Transaction approved"); setTxs(prev => prev.map(t => t.id === tx.id ? { ...t, status: "completed" } : t)); }
+                        else toast.error(d.error);
+                      }}><CheckCircle className="w-3 h-3 mr-1" /> Approve</Button>
+                      <Button size="sm" variant="destructive" className="text-xs" onClick={async () => {
+                        const res = await fetch("/api/admin-action", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "reject_txn", data: { transactionId: tx.id } }) });
+                        const d = await res.json();
+                        if (d.success) { toast.success("Transaction rejected"); setTxs(prev => prev.map(t => t.id === tx.id ? { ...t, status: "cancelled" } : t)); }
+                        else toast.error(d.error);
+                      }}><XCircle className="w-3 h-3 mr-1" /> Reject</Button>
+                      <Button size="sm" variant="outline" className="text-xs" onClick={async () => {
+                        const res = await fetch("/api/admin-action", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "reverse_txn", data: { transactionId: tx.id } }) });
+                        const d = await res.json();
+                        if (d.success) { toast.success("Transaction reversed"); setTxs(prev => prev.map(t => t.id === tx.id ? { ...t, status: "reversed" } : t)); }
+                        else toast.error(d.error);
+                      }}><RefreshCw className="w-3 h-3 mr-1" /> Reverse</Button>
+                      <Button size="sm" variant="outline" className="text-xs" onClick={() => {
+                        const date = prompt("Enter back-date (YYYY-MM-DD):", new Date().toISOString().split('T')[0]);
+                        if (date) fetch("/api/admin-action", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "backdate_txn", data: { transactionId: tx.id, date } }) }).then(r => r.json()).then(d => d.success ? toast.success("Transaction backdated") : toast.error(d.error));
+                      }}><Clock className="w-3 h-3 mr-1" /> Back-date</Button>
                     </div>
                   </div>
                 )}
@@ -840,13 +858,26 @@ function DepositsTab() {
             </div>
           </div>
           <div className="flex gap-2 mt-3">
-            <Button size="sm" className="flex-1 bg-green-600 hover:bg-green-700 text-white text-xs" onClick={() => toast.success("Deposit approved")}>
+            <Button size="sm" className="flex-1 bg-green-600 hover:bg-green-700 text-white text-xs" onClick={async () => {
+              const res = await fetch("/api/admin-action", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "approve_txn", data: { transactionId: d.id } }) });
+              const r = await res.json();
+              if (r.success) { toast.success("Deposit approved"); setDeposits(prev => prev.filter(x => x.id !== d.id)); }
+              else toast.error(r.error);
+            }}>
               <CheckCircle className="w-3 h-3 mr-1" /> Approve
             </Button>
-            <Button size="sm" variant="destructive" className="flex-1 text-xs" onClick={() => toast.error("Deposit rejected")}>
+            <Button size="sm" variant="destructive" className="flex-1 text-xs" onClick={async () => {
+              const res = await fetch("/api/admin-action", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "reject_txn", data: { transactionId: d.id } }) });
+              const r = await res.json();
+              if (r.success) { toast.success("Deposit rejected"); setDeposits(prev => prev.filter(x => x.id !== d.id)); }
+              else toast.error(r.error);
+            }}>
               <XCircle className="w-3 h-3 mr-1" /> Reject
             </Button>
-            <Button size="sm" variant="outline" className="text-xs">
+            <Button size="sm" variant="outline" className="text-xs" onClick={() => {
+              const date = prompt("Back-date (YYYY-MM-DD):", new Date().toISOString().split('T')[0]);
+              if (date) fetch("/api/admin-action", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "backdate_txn", data: { transactionId: d.id, date } }) }).then(r => r.json()).then(r => r.success ? toast.success("Backdated") : toast.error(r.error));
+            }}>
               <Clock className="w-3 h-3 mr-1" /> Back-date
             </Button>
           </div>
@@ -906,8 +937,18 @@ function WithdrawalsTab() {
             </div>
           </div>
           <div className="flex gap-2 mt-3">
-            <Button size="sm" className="flex-1 bg-green-600 hover:bg-green-700 text-white text-xs"><CheckCircle className="w-3 h-3 mr-1" /> Approve</Button>
-            <Button size="sm" variant="destructive" className="flex-1 text-xs"><XCircle className="w-3 h-3 mr-1" /> Reject</Button>
+            <Button size="sm" className="flex-1 bg-green-600 hover:bg-green-700 text-white text-xs" onClick={async () => {
+              const res = await fetch("/api/admin-action", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "approve_txn", data: { transactionId: w.id } }) });
+              const r = await res.json();
+              if (r.success) { toast.success("Withdrawal approved"); setWithdrawals(prev => prev.filter(x => x.id !== w.id)); }
+              else toast.error(r.error);
+            }}><CheckCircle className="w-3 h-3 mr-1" /> Approve</Button>
+            <Button size="sm" variant="destructive" className="flex-1 text-xs" onClick={async () => {
+              const res = await fetch("/api/admin-action", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "reject_txn", data: { transactionId: w.id } }) });
+              const r = await res.json();
+              if (r.success) { toast.success("Withdrawal rejected"); setWithdrawals(prev => prev.filter(x => x.id !== w.id)); }
+              else toast.error(r.error);
+            }}><XCircle className="w-3 h-3 mr-1" /> Reject</Button>
           </div>
         </Card>
       ))}
@@ -979,9 +1020,24 @@ function LoansTab() {
                 <div><span className="text-muted-foreground text-xs">Rate:</span><p className="text-foreground">{(Number(l.interest_rate) * 100).toFixed(2)}%</p></div>
               </div>
               <div className="flex flex-wrap gap-2">
-                <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white text-xs"><CheckCircle className="w-3 h-3 mr-1" /> Approve</Button>
-                <Button size="sm" variant="destructive" className="text-xs"><XCircle className="w-3 h-3 mr-1" /> Reject</Button>
-                <Button size="sm" variant="outline" className="text-xs text-red-500"><Ban className="w-3 h-3 mr-1" /> Mark Defaulted</Button>
+                <Button size="sm" className="bg-green-600 hover:bg-green-700 text-white text-xs" onClick={async () => {
+                  const res = await fetch("/api/admin-action", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "approve_loan", data: { loanId: l.id } }) });
+                  const r = await res.json();
+                  if (r.success) { toast.success("Loan approved"); setLoans(prev => prev.map(x => x.id === l.id ? { ...x, status: "active" } : x)); }
+                  else toast.error(r.error);
+                }}><CheckCircle className="w-3 h-3 mr-1" /> Approve</Button>
+                <Button size="sm" variant="destructive" className="text-xs" onClick={async () => {
+                  const res = await fetch("/api/admin-action", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "reject_loan", data: { loanId: l.id } }) });
+                  const r = await res.json();
+                  if (r.success) { toast.success("Loan rejected"); setLoans(prev => prev.map(x => x.id === l.id ? { ...x, status: "rejected" } : x)); }
+                  else toast.error(r.error);
+                }}><XCircle className="w-3 h-3 mr-1" /> Reject</Button>
+                <Button size="sm" variant="outline" className="text-xs text-red-500" onClick={async () => {
+                  const res = await fetch("/api/admin-action", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "default_loan", data: { loanId: l.id } }) });
+                  const r = await res.json();
+                  if (r.success) { toast.success("Loan marked defaulted"); setLoans(prev => prev.map(x => x.id === l.id ? { ...x, status: "defaulted" } : x)); }
+                  else toast.error(r.error);
+                }}><Ban className="w-3 h-3 mr-1" /> Mark Defaulted</Button>
               </div>
             </div>
           )}
@@ -1188,26 +1244,38 @@ function SettingsTab() {
         <div className="space-y-4">
           <div>
             <label className="text-sm font-medium text-foreground block mb-1">POV Probability (%)</label>
-            <Input type="number" defaultValue={settings.pov_probability ?? 80} className="bg-background border-border w-32" />
+            <Input data-setting="pov_probability" type="number" defaultValue={settings.pov_probability ?? 80} className="bg-background border-border w-32" />
             <p className="text-xs text-muted-foreground mt-1">Chance a transaction gets flagged for POV verification</p>
           </div>
           <div>
             <label className="text-sm font-medium text-foreground block mb-1">Default Daily Transfer Limit</label>
-            <Input type="number" defaultValue={settings.daily_transfer_limit ?? 10000} className="bg-background border-border w-40" />
+            <Input data-setting="daily_transfer_limit" type="number" defaultValue={settings.daily_transfer_limit ?? 10000} className="bg-background border-border w-40" />
           </div>
           <div>
             <label className="text-sm font-medium text-foreground block mb-1">Default Interest Rate (%)</label>
-            <Input type="number" step="0.01" defaultValue={settings.default_interest_rate ?? 4.50} className="bg-background border-border w-32" />
+            <Input data-setting="default_interest_rate" type="number" step="0.01" defaultValue={settings.default_interest_rate ?? 4.50} className="bg-background border-border w-32" />
           </div>
           <div>
             <label className="text-sm font-medium text-foreground block mb-1">Bank Name</label>
-            <Input defaultValue={settings.bank_name ?? "StateBank"} className="bg-background border-border max-w-xs" />
+            <Input data-setting="bank_name" defaultValue={settings.bank_name ?? "StateBank"} className="bg-background border-border max-w-xs" />
           </div>
           <div>
             <label className="text-sm font-medium text-foreground block mb-1">Routing Number</label>
-            <Input defaultValue={settings.routing_number ?? "021000021"} className="bg-background border-border w-40" />
+            <Input data-setting="routing_number" defaultValue={settings.routing_number ?? "021000021"} className="bg-background border-border w-40" />
           </div>
-          <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => toast.success("Settings saved")}>Save Settings</Button>
+          <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={async () => {
+  const settings = {
+    pov_probability: (document.querySelector('[data-setting="pov_probability"]') as HTMLInputElement)?.value || 80,
+    daily_transfer_limit: (document.querySelector('[data-setting="daily_transfer_limit"]') as HTMLInputElement)?.value || 10000,
+    default_interest_rate: (document.querySelector('[data-setting="default_interest_rate"]') as HTMLInputElement)?.value || 4.50,
+    bank_name: (document.querySelector('[data-setting="bank_name"]') as HTMLInputElement)?.value || "StateBank",
+    routing_number: (document.querySelector('[data-setting="routing_number"]') as HTMLInputElement)?.value || "021000021",
+  };
+  const res = await fetch("/api/admin-action", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "save_settings", data: { settings } }) });
+  const r = await res.json();
+  if (r.success) toast.success("Settings saved");
+  else toast.error(r.error);
+}}>Save Settings</Button>
         </div>
       </Card>
 
